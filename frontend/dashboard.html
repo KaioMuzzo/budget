@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Budget — Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    main {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      padding: 2.5rem;
+      gap: 1.5rem;
+    }
+
+    /* ── Month nav ── */
+    .month-nav {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .month-label {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      min-width: 220px;
+    }
+
+    .btn-arrow {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-arrow:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Cards ── */
+    .cards {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      overflow: hidden;
+      animation: fadeIn 0.4s ease both;
+    }
+
+    .card:nth-child(2) { animation-delay: 0.06s; }
+    .card:nth-child(3) { animation-delay: 0.12s; }
+    .card:nth-child(4) { animation-delay: 0.18s; }
+
+    .card-top-bar {
+      height: 3px;
+      border-radius: 2px;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .card-value {
+      font-family: var(--font-mono);
+      font-size: 1.6rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .card-sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 0.1rem;
+    }
+
+    .card-sub.up   { color: var(--income); }
+    .card-sub.down { color: var(--expense); }
+
+    .card.income  .card-value { color: var(--income); }
+    .card.expense .card-value { color: var(--expense); }
+    .card.invest  .card-value { color: var(--p6); }
+    .card.balance .card-value { color: var(--accent); }
+
+    /* ── Row layouts ── */
+    .row {
+      display: flex;
+      gap: 1rem;
+    }
+
+    /* ── Panels genéricos ── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .panel-title {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* ── Legenda do bar chart ── */
+    .chart-legend {
+      display: flex;
+      gap: 1.25rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── Donut ── */
+    .donut-wrap {
+      max-width: 353px;
+      margin: 0 auto;
+    }
+
+    .donut-legend {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+
+    .donut-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.78rem;
+    }
+
+    .donut-legend-name {
+      flex: 1;
+      color: var(--muted);
+    }
+
+    .donut-legend-bar-wrap {
+      flex: 2;
+      height: 3px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .donut-legend-bar {
+      height: 100%;
+      border-radius: 99px;
+    }
+
+    .donut-legend-pct {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      min-width: 2.5rem;
+      text-align: right;
+    }
+
+    /* ── Pockets ── */
+    .pockets-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .pocket-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.85rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .pocket-row:last-child { border-bottom: none; }
+
+    .pocket-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .pocket-name {
+      font-size: 0.82rem;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .pocket-bar-track {
+      flex: 2;
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .pocket-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      opacity: 0.8;
+      transition: width 0.5s ease;
+    }
+
+    .pocket-pct {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      min-width: 36px;
+      text-align: right;
+    }
+
+    .pocket-amount {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      font-weight: 600;
+      min-width: 100px;
+      text-align: right;
+    }
+
+    /* ── Tabela ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      text-align: left;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+    tbody td {
+      padding: 0.75rem 0;
+      font-size: 0.82rem;
+    }
+
+    .tx-desc { font-weight: 600; }
+    .tx-cat  { font-size: 0.7rem; color: var(--muted); margin-top: 0.1rem; }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 0.2rem 0.55rem;
+      border-radius: 99px;
+      letter-spacing: 0.03em;
+    }
+
+    .badge.income  { background: rgba(56,189,248,0.12);  color: var(--income); }
+    .badge.expense { background: rgba(244,114,182,0.12); color: var(--expense); }
+    .badge.invest  { background: rgba(251,191,36,0.12);  color: var(--p6); }
+
+    .tx-amount {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .tx-amount.income  { color: var(--income); }
+    .tx-amount.expense { color: var(--expense); }
+    .tx-amount.invest  { color: var(--p6); }
+
+    .tx-date {
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-align: right;
+      font-family: var(--font-mono);
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">BUDGET</span>
+  <a href="dashboard.html" class="active">Dashboard</a>
+  <a href="transactions.html">Lançamentos</a>
+  <a href="investments.html">Investimentos</a>
+  <a href="config.html">Config</a>
+</nav>
+
+<main>
+
+  <!-- Month nav -->
+  <div class="month-nav">
+    <button class="btn-arrow" id="btnPrev">&#8592;</button>
+    <span class="month-label" id="monthLabel">—</span>
+    <button class="btn-arrow" id="btnNext">&#8594;</button>
+  </div>
+
+  <!-- Cards -->
+  <div class="cards">
+    <div class="card income">
+      <div class="card-top-bar" style="background:var(--income)"></div>
+      <span class="card-label">Receita</span>
+      <span class="card-value" id="cardIncome">—</span>
+      <span class="card-sub" id="cardIncomeSub">—</span>
+    </div>
+    <div class="card expense">
+      <div class="card-top-bar" style="background:var(--expense)"></div>
+      <span class="card-label">Despesas</span>
+      <span class="card-value" id="cardExpense">—</span>
+      <span class="card-sub" id="cardExpenseSub">—</span>
+    </div>
+    <div class="card invest">
+      <div class="card-top-bar" style="background:var(--p6)"></div>
+      <span class="card-label">Investido</span>
+      <span class="card-value" id="cardInvest">—</span>
+      <span class="card-sub" id="cardInvestSub">—</span>
+    </div>
+    <div class="card balance">
+      <div class="card-top-bar" style="background:var(--accent)"></div>
+      <span class="card-label">Saldo</span>
+      <span class="card-value" id="cardBalance">—</span>
+      <span class="card-sub" id="cardBalanceSub">—</span>
+    </div>
+  </div>
+
+  <!-- Main row: left column (bar + pockets) + right column (donut) -->
+  <div class="row">
+
+    <!-- Left column -->
+    <div style="flex:1.5;display:flex;flex-direction:column;gap:1rem">
+
+      <!-- Bar chart -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Últimos 6 meses</span>
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:var(--income)"></div>Receita</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--expense)"></div>Despesa</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--p6)"></div>Investido</div>
+          </div>
+        </div>
+        <canvas id="barChart" height="140"></canvas>
+      </div>
+
+      <!-- Pockets -->
+      <div class="panel">
+        <span class="panel-title">Alocação do salário</span>
+        <div class="pockets-list" id="pocketsGrid"></div>
+      </div>
+
+    </div><!-- /left column -->
+
+    <!-- Donut chart -->
+    <div class="panel" style="flex:1">
+      <span class="panel-title">Despesas por categoria</span>
+      <div class="donut-wrap">
+        <canvas id="donutChart" width="353" height="353"></canvas>
+      </div>
+      <div class="donut-legend" id="donutLegend"></div>
+    </div>
+
+  </div><!-- /main row -->
+
+  <!-- Transactions — full width -->
+  <div class="panel">
+    <span class="panel-title">Últimos lançamentos</span>
+    <table>
+      <thead>
+        <tr>
+          <th>Descrição</th>
+          <th>Categoria</th>
+          <th>Tipo</th>
+          <th style="text-align:right">Valor</th>
+          <th style="text-align:right">Data</th>
+        </tr>
+      </thead>
+      <tbody id="txBody"></tbody>
+    </table>
+  </div>
+
+</main>
+
+<script src="js/dashboard.js"></script>
+
+</body>
+</html>

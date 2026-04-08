@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  INVESTMENT
+}
+
+enum SubType {
+  DEPOSIT
+  WITHDRAWAL
+}
+
+model BudgetConfig {
+  id         Int      @id @default(autoincrement())
+  salary     Decimal  @db.Decimal(10, 2)
+  pockets    Json
+  updated_at DateTime @updatedAt
+}
+
+model Category {
+  id           Int             @id @default(autoincrement())
+  name         String
+  type         TransactionType
+  updated_at   DateTime        @updatedAt
+  transactions Transaction[]
+}
+
+model Transaction {
+  id          Int             @id @default(autoincrement())
+  description String
+  amount      Decimal         @db.Decimal(10, 2)
+  type        TransactionType
+  date        DateTime
+  created_at  DateTime        @default(now())
+  category_id Int?
+  sub_type    SubType?
+  box_id      Int?
+  category    Category?       @relation(fields: [category_id], references: [id])
+  box         InvestmentBox?  @relation(fields: [box_id], references: [id])
+}
+
+model InvestmentBox {
+  id           Int           @id @default(autoincrement())
+  name         String
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @updatedAt
+  transactions Transaction[]
+}

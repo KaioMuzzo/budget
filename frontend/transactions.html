@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Budget — Lançamentos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { overflow-x: hidden; }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      padding: 2.5rem;
+      gap: 1.5rem;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .month-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-right: auto;
+    }
+
+    .month-label {
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      min-width: 180px;
+    }
+
+    .btn-arrow {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-arrow:hover { border-color: var(--accent); color: var(--accent); }
+
+    .btn-new {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--font-display);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: var(--accent);
+      color: #0d0d0f;
+      border: none;
+      border-radius: 6px;
+      padding: 0.65rem 1.25rem;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+
+    .btn-new:hover { opacity: 0.85; transform: translateY(-1px); }
+
+    .btn-categories {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--font-display);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: none;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.65rem 1.25rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-categories:hover { border-color: var(--accent); color: var(--accent); }
+
+    .summary-bar {
+      display: flex;
+      gap: 1.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+    }
+
+    .summary-item { display: flex; align-items: center; gap: 0.5rem; }
+    .summary-item .lbl          { color: var(--muted); }
+    .summary-item .val-income   { color: var(--income);  font-weight: 600; }
+    .summary-item .val-expense  { color: var(--expense); font-weight: 600; }
+    .summary-item .val-invest   { color: #fbbf24;        font-weight: 600; }
+    .summary-item .val-balance  { color: var(--accent);  font-weight: 600; }
+
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    thead th {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0.9rem 1.25rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+      animation: fadeIn 0.3s ease both;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td { padding: 0.9rem 1.25rem; font-size: 0.88rem; }
+
+    .td-desc { font-weight: 600; }
+
+    .td-amount { font-family: var(--font-mono); font-weight: 600; font-size: 0.88rem; }
+    .td-amount.income   { color: var(--income);  }
+    .td-amount.expense  { color: var(--expense); }
+    .td-amount.invest   { color: #fbbf24;        }
+
+    .td-cat {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 0.2rem 0.65rem;
+    }
+
+    .td-date { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
+
+    .btn-delete {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      transition: color 0.2s, background 0.2s;
+    }
+
+    .btn-delete:hover { color: var(--danger); background: rgba(255,78,78,0.08); }
+
+    .empty-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3.5rem;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    /* OVERLAY */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 10;
+    }
+
+    .overlay.open { opacity: 1; pointer-events: all; }
+
+    /* SIDE PANEL */
+    .side-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 380px;
+      height: 100vh;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 20;
+    }
+
+    .side-panel.open { transform: translateX(0); }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .panel-title { font-size: 1rem; font-weight: 800; letter-spacing: -0.02em; }
+
+    .btn-close {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .btn-close:hover { color: var(--text); border-color: var(--muted); }
+
+    .panel-body {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      padding: 1.5rem;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .panel-footer {
+      padding: 1.5rem;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .field { display: flex; flex-direction: column; gap: 0.5rem; }
+
+    .field label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .field input,
+    .field select {
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 0.65rem 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+
+    .field input:focus,
+    .field select:focus { border-color: var(--accent); }
+
+    .field select option { background: var(--surface); }
+
+    .type-toggle {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .type-btn {
+      flex: 1;
+      font-family: var(--font-display);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: none;
+      border: none;
+      padding: 0.65rem;
+      cursor: pointer;
+      color: var(--muted);
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .type-btn.active-income   { background: rgba(56,189,248,0.15);  color: var(--income);  }
+    .type-btn.active-expense  { background: rgba(244,114,182,0.15); color: var(--expense); }
+    .type-btn.active-invest   { background: rgba(251,191,36,0.15);  color: #fbbf24;        }
+
+    .td-cat.invest { color: #fbbf24; border-color: rgba(251,191,36,0.3); }
+
+    .sub-toggle {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .sub-btn {
+      flex: 1;
+      font-family: var(--font-display);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: none;
+      border: none;
+      padding: 0.65rem;
+      cursor: pointer;
+      color: var(--muted);
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .sub-btn.active-deposit    { background: rgba(168,255,62,0.12);  color: var(--accent);  }
+    .sub-btn.active-withdrawal { background: rgba(244,114,182,0.15); color: var(--expense); }
+
+    .btn-submit {
+      width: 100%;
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: var(--accent);
+      color: #0d0d0f;
+      border: none;
+      border-radius: 6px;
+      padding: 0.85rem;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .btn-submit:hover { opacity: 0.85; }
+
+    .field-error {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--danger);
+      display: none;
+    }
+
+    .field-error.visible { display: block; }
+
+    /* CAT LIST */
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .cat-list {
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .cat-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.88rem;
+      animation: fadeIn 0.2s ease both;
+    }
+
+    .cat-item:last-child { border-bottom: none; }
+
+    .cat-badge {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 0.15rem 0.5rem;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .cat-badge.income  { background: rgba(56,189,248,0.12);  color: var(--income);  }
+    .cat-badge.expense { background: rgba(244,114,182,0.12); color: var(--expense); }
+
+    .cat-name { flex: 1; font-weight: 600; }
+
+    .cat-empty {
+      padding: 1.5rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .divider { height: 1px; background: var(--border); }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">BUDGET</span>
+  <a href="dashboard.html">Dashboard</a>
+  <a href="transactions.html" class="active">Lançamentos</a>
+  <a href="investments.html">Investimentos</a>
+  <a href="config.html">Config</a>
+</nav>
+
+<main>
+  <div class="toolbar">
+    <div class="month-nav">
+      <button class="btn-arrow" id="btnPrev">&#8592;</button>
+      <span class="month-label" id="monthLabel">—</span>
+      <button class="btn-arrow" id="btnNext">&#8594;</button>
+    </div>
+    <button class="btn-categories" id="btnCategories">Categorias</button>
+    <button class="btn-new" id="btnNew">+ Novo Lançamento</button>
+  </div>
+
+  <div class="summary-bar">
+    <div class="summary-item">
+      <span class="lbl">Receitas</span>
+      <span class="val-income" id="sumIncome">—</span>
+    </div>
+    <div class="summary-item">
+      <span class="lbl">Despesas</span>
+      <span class="val-expense" id="sumExpense">—</span>
+    </div>
+    <div class="summary-item">
+      <span class="lbl">Investido</span>
+      <span class="val-invest" id="sumInvest">—</span>
+    </div>
+    <div class="summary-item">
+      <span class="lbl">Saldo</span>
+      <span class="val-balance" id="sumBalance">—</span>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Descrição</th>
+          <th>Categoria / Caixinha</th>
+          <th>Data</th>
+          <th>Valor</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</main>
+
+<div class="overlay" id="overlay"></div>
+
+<!-- PAINEL: NOVO LANÇAMENTO -->
+<div class="side-panel" id="panelTx">
+  <div class="panel-header">
+    <span class="panel-title">Novo Lançamento</span>
+    <button class="btn-close" id="closeTx">✕</button>
+  </div>
+  <div class="panel-body">
+    <div class="field">
+      <label>Tipo</label>
+      <div class="type-toggle">
+        <button class="type-btn active-income" id="typeIncome">Receita</button>
+        <button class="type-btn" id="typeExpense">Despesa</button>
+        <button class="type-btn" id="typeInvest">Investimento</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Descrição</label>
+      <input type="text" id="fDesc" placeholder="Ex: Almoço, Salário..." />
+      <span class="field-error" id="errDesc">Descrição obrigatória</span>
+    </div>
+    <div class="field">
+      <label>Valor (R$)</label>
+      <input type="number" id="fAmount" placeholder="0,00" min="0.01" step="0.01" />
+      <span class="field-error" id="errAmount">Valor inválido</span>
+    </div>
+    <div class="field" id="fieldCategory">
+      <label>Categoria</label>
+      <select id="fCategory"><option value="">Selecionar...</option></select>
+      <span class="field-error" id="errCat">Categoria obrigatória</span>
+    </div>
+    <div class="field" id="fieldBox" style="display:none">
+      <label>Caixinha</label>
+      <select id="fBox"><option value="">Selecionar...</option></select>
+      <span class="field-error" id="errBox">Caixinha obrigatória</span>
+    </div>
+    <div class="field" id="fieldSubType" style="display:none">
+      <label>Tipo de Movimento</label>
+      <div class="sub-toggle">
+        <button class="sub-btn active-deposit" id="subDeposit">Aporte</button>
+        <button class="sub-btn" id="subWithdrawal">Resgate</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Data</label>
+      <input type="date" id="fDate" />
+      <span class="field-error" id="errDate">Data inválida</span>
+    </div>
+  </div>
+  <div class="panel-footer">
+    <button class="btn-submit" id="btnSubmitTx">Adicionar</button>
+  </div>
+</div>
+
+<!-- PAINEL: CATEGORIAS -->
+<div class="side-panel" id="panelCat">
+  <div class="panel-header">
+    <span class="panel-title">Categorias</span>
+    <button class="btn-close" id="closeCat">✕</button>
+  </div>
+  <div class="panel-body">
+    <span class="section-label">Nova categoria</span>
+    <div class="field">
+      <label>Nome</label>
+      <input type="text" id="catName" placeholder="Ex: Alimentação, Salário..." />
+      <span class="field-error" id="errCatName">Nome obrigatório</span>
+    </div>
+    <div class="field">
+      <label>Tipo</label>
+      <div class="type-toggle">
+        <button class="type-btn active-income" id="catTypeIncome">Receita</button>
+        <button class="type-btn" id="catTypeExpense">Despesa</button>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <span class="section-label">Existentes</span>
+    <div class="cat-list" id="catList">
+      <div class="cat-empty">Carregando...</div>
+    </div>
+  </div>
+  <div class="panel-footer">
+    <button class="btn-submit" id="btnSubmitCat">Criar Categoria</button>
+  </div>
+</div>
+
+<script src="js/transactions.js"></script>
+</body>
+</html>

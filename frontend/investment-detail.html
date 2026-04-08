@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Budget — Detalhe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { overflow-x: hidden; }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      padding: 2.5rem;
+      gap: 1.5rem;
+    }
+
+    .detail-header {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .btn-back {
+      font-family: var(--font-display);
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-decoration: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.5rem 0.9rem;
+      transition: color 0.2s, border-color 0.2s;
+      flex-shrink: 0;
+    }
+
+    .btn-back:hover { color: var(--text); border-color: var(--muted); }
+
+    .box-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      flex: 1;
+    }
+
+    .box-name {
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .box-balance-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .box-balance {
+      font-family: var(--font-mono);
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #fbbf24;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .btn-deposit {
+      font-family: var(--font-display);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: var(--accent);
+      color: #0d0d0f;
+      border: none;
+      border-radius: 6px;
+      padding: 0.65rem 1.25rem;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+
+    .btn-deposit:hover { opacity: 0.85; transform: translateY(-1px); }
+
+    .btn-withdraw {
+      font-family: var(--font-display);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: none;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.65rem 1.25rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-withdraw:hover { border-color: var(--accent); color: var(--accent); }
+
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    thead th {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0.9rem 1.25rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+      animation: fadeIn 0.3s ease both;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td { padding: 0.9rem 1.25rem; font-size: 0.88rem; }
+
+    .td-type {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: 20px;
+      padding: 0.2rem 0.65rem;
+    }
+
+    .td-type.deposit    { background: rgba(168,255,62,0.1);  color: var(--accent); }
+    .td-type.withdrawal { background: rgba(244,114,182,0.12); color: var(--expense); }
+
+    .td-amount { font-family: var(--font-mono); font-weight: 600; font-size: 0.88rem; }
+    .td-amount.deposit    { color: var(--accent);  }
+    .td-amount.withdrawal { color: var(--expense); }
+
+    .td-date { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
+
+    .empty-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3.5rem;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    /* OVERLAY */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 10;
+    }
+
+    .overlay.open { opacity: 1; pointer-events: all; }
+
+    /* SIDE PANEL */
+    .side-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 380px;
+      height: 100vh;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 20;
+    }
+
+    .side-panel.open { transform: translateX(0); }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .panel-title { font-size: 1rem; font-weight: 800; letter-spacing: -0.02em; }
+
+    .btn-close {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .btn-close:hover { color: var(--text); border-color: var(--muted); }
+
+    .panel-body {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      padding: 1.5rem;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .panel-footer {
+      padding: 1.5rem;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .field { display: flex; flex-direction: column; gap: 0.5rem; }
+
+    .field label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .field input {
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 0.65rem 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+
+    .field input:focus { border-color: var(--accent); }
+
+    .btn-submit {
+      width: 100%;
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: var(--accent);
+      color: #0d0d0f;
+      border: none;
+      border-radius: 6px;
+      padding: 0.85rem;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .btn-submit:hover { opacity: 0.85; }
+
+    .field-error {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--danger);
+      display: none;
+    }
+
+    .field-error.visible { display: block; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">BUDGET</span>
+  <a href="dashboard.html">Dashboard</a>
+  <a href="transactions.html">Lançamentos</a>
+  <a href="investments.html" class="active">Investimentos</a>
+  <a href="config.html">Config</a>
+</nav>
+
+<main>
+  <div class="detail-header">
+    <a href="investments.html" class="btn-back">← Voltar</a>
+    <div class="box-info">
+      <span class="box-name" id="boxName">—</span>
+      <span class="box-balance" id="boxBalance">—</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn-withdraw" id="btnWithdraw">Resgate</button>
+      <button class="btn-deposit" id="btnDeposit">Aporte</button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th>Data</th>
+          <th>Valor</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</main>
+
+<div class="overlay" id="overlay"></div>
+
+<!-- PAINEL: APORTE -->
+<div class="side-panel" id="panelDeposit">
+  <div class="panel-header">
+    <span class="panel-title">Aporte</span>
+    <button class="btn-close" id="closeDeposit">✕</button>
+  </div>
+  <div class="panel-body">
+    <div class="field">
+      <label>Valor (R$)</label>
+      <input type="number" id="fDepositAmount" placeholder="0,00" min="0.01" step="0.01" />
+      <span class="field-error" id="errDepositAmount">Valor inválido</span>
+    </div>
+    <div class="field">
+      <label>Data</label>
+      <input type="date" id="fDepositDate" />
+      <span class="field-error" id="errDepositDate">Data inválida</span>
+    </div>
+  </div>
+  <div class="panel-footer">
+    <button class="btn-submit" id="btnSubmitDeposit">Confirmar Aporte</button>
+  </div>
+</div>
+
+<!-- PAINEL: RESGATE -->
+<div class="side-panel" id="panelWithdraw">
+  <div class="panel-header">
+    <span class="panel-title">Resgate</span>
+    <button class="btn-close" id="closeWithdraw">✕</button>
+  </div>
+  <div class="panel-body">
+    <div class="field">
+      <label>Valor (R$)</label>
+      <input type="number" id="fWithdrawAmount" placeholder="0,00" min="0.01" step="0.01" />
+      <span class="field-error" id="errWithdrawAmount">Valor inválido</span>
+    </div>
+    <div class="field">
+      <label>Data</label>
+      <input type="date" id="fWithdrawDate" />
+      <span class="field-error" id="errWithdrawDate">Data inválida</span>
+    </div>
+  </div>
+  <div class="panel-footer">
+    <button class="btn-submit" id="btnSubmitWithdraw">Confirmar Resgate</button>
+  </div>
+</div>
+
+<script src="js/investment-detail.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# docs
+CLAUDE.md
+API.md
+.claude
+docs
+
+# back
+node_modules/
+dist/
+.env
+.env.test
+generated

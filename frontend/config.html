@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Budget — Config</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* MAIN LAYOUT */
+    main {
+      display: flex;
+      flex: 1;
+      gap: 0;
+    }
+
+    /* LEFT — CHART */
+    .panel-chart {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+      padding: 3rem 2.5rem;
+      width: 380px;
+      min-width: 380px;
+      border-right: 1px solid var(--border);
+    }
+
+    .chart-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      align-self: flex-start;
+    }
+
+    .donut-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas#donut { display: block; }
+
+    .legend {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      width: 100%;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.82rem;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .legend-name { flex: 1; color: var(--muted); }
+    .legend-val  { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text); }
+
+    /* RIGHT — CONTROLS */
+    .panel-controls {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      padding: 3rem 3rem;
+      gap: 2rem;
+      overflow-y: auto;
+    }
+
+    .controls-header {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .controls-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    .salary-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .salary-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .salary-input {
+      font-family: var(--font-mono);
+      font-size: 1.1rem;
+      font-weight: 600;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--accent);
+      padding: 0.5rem 0.75rem;
+      width: 180px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .salary-input:focus { border-color: var(--accent); }
+
+    /* SUM INDICATOR */
+    .sum-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+    }
+
+    .sum-bar-track {
+      flex: 1;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .sum-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--accent);
+      transition: width 0.3s ease, background 0.3s;
+    }
+
+    .sum-value { color: var(--muted); min-width: 3.5rem; text-align: right; }
+    .sum-value.over { color: var(--danger); }
+    .sum-value.ok   { color: var(--accent); }
+
+    /* SLIDERS */
+    .sliders {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .slider-meta {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .slider-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .slider-pct {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .slider-amount {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      font-weight: 600;
+      min-width: 90px;
+      text-align: right;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--text);
+      border: 2px solid var(--bg);
+      box-shadow: 0 0 0 2px currentColor;
+      transition: transform 0.15s;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* SAVE */
+    .save-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-top: auto;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .btn-save {
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: var(--accent);
+      color: #0d0d0f;
+      border: none;
+      border-radius: 6px;
+      padding: 0.75rem 2rem;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+
+    .btn-save:hover { opacity: 0.85; transform: translateY(-1px); }
+    .btn-save:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .btn-reset {
+      font-family: var(--font-display);
+      font-size: 0.82rem;
+      font-weight: 600;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      padding: 0.75rem 1.5rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-reset:hover { border-color: var(--muted); color: var(--text); }
+
+    .save-msg {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--accent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .save-msg.visible { opacity: 1; }
+
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      background: var(--danger);
+      color: #fff;
+      padding: 0.6rem 1rem;
+      border-radius: 6px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .toast.visible { opacity: 1; }
+
+    .panel-chart, .panel-controls { animation: fadeIn 0.4s ease both; }
+    .panel-controls { animation-delay: 0.1s; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">BUDGET</span>
+  <a href="dashboard.html">Dashboard</a>
+  <a href="transactions.html">Lançamentos</a>
+  <a href="investments.html">Investimentos</a>
+  <a href="config.html" class="active">Config</a>
+</nav>
+
+<main>
+  <!-- CHART -->
+  <aside class="panel-chart">
+    <span class="chart-title">Visualização de uso</span>
+    <div class="donut-wrap">
+      <canvas id="donut" width="220" height="220"></canvas>
+    </div>
+    <div class="legend" id="legend"></div>
+  </aside>
+
+  <!-- CONTROLS -->
+  <section class="panel-controls">
+    <div class="controls-header">
+      <h1 class="controls-title">Controle de Orçamento</h1>
+
+      <div class="salary-row">
+        <span class="salary-label">Salário mensal</span>
+        <input type="number" id="salary" class="salary-input" placeholder="0.00" min="0" step="100" />
+      </div>
+    </div>
+
+    <div class="sum-indicator">
+      <div class="sum-bar-track">
+        <div class="sum-bar-fill" id="sumBar" style="width:0%"></div>
+      </div>
+      <span class="sum-value" id="sumVal">0%</span>
+    </div>
+
+    <div class="sliders" id="sliders"></div>
+
+    <div class="save-row">
+      <button class="btn-save" id="btnSave">Salvar</button>
+      <button class="btn-reset" id="btnReset">Resetar</button>
+      <span class="toast" id="toast">Os baldes devem somar 100%</span>
+      <span class="save-msg" id="saveMsg">✓ Salvo com sucesso</span>
+    </div>
+  </section>
+</main>
+
+<script src="js/config.js"></script>
+</body>
+</html>
