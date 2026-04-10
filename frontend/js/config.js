@@ -1,130 +1,132 @@
 const API = 'http://localhost:3333/api'
 
 const POCKETS = [
-  { name: 'Liberdade Financeira', color: 'var(--p1)' },
-  { name: 'Custos Fixos',         color: 'var(--p2)' },
-  { name: 'Conforto',             color: 'var(--p3)' },
-  { name: 'Metas',                color: 'var(--p4)' },
-  { name: 'Prazeres',             color: 'var(--p5)' },
-  { name: 'Conhecimento',         color: 'var(--p6)' },
+  { name: 'Liberdade Financeira', color: 'var(--p1)', hex: '#a8ff3e' },
+  { name: 'Custos Fixos',         color: 'var(--p2)', hex: '#38bdf8' },
+  { name: 'Conforto',             color: 'var(--p3)', hex: '#f472b6' },
+  { name: 'Metas',                color: 'var(--p4)', hex: '#fb923c' },
+  { name: 'Prazeres',             color: 'var(--p5)', hex: '#a78bfa' },
+  { name: 'Conhecimento',         color: 'var(--p6)', hex: '#fbbf24' },
 ]
 
-const COLORS = ['#a8ff3e','#38bdf8','#f472b6','#fb923c','#a78bfa','#fbbf24']
+const COLORS = POCKETS.map(p => p.hex)
 const DEFAULT_PCTS = [25, 30, 15, 15, 10, 5]
 
 let pcts = [...DEFAULT_PCTS]
 let salary = 0
+let donutChart = null
 
-// --- BUILD SLIDERS ---
+// --- BUILD SLIDER CARDS ---
 const slidersEl = document.getElementById('sliders')
 const legendEl  = document.getElementById('legend')
 
 POCKETS.forEach((p, i) => {
-  const row = document.createElement('div')
-  row.className = 'slider-row'
-  row.innerHTML = `
-    <div class="slider-meta">
-      <span class="slider-name" style="color:${p.color}">${p.name}</span>
-      <span class="slider-pct" id="pct-${i}">0%</span>
-      <span class="slider-amount" style="color:${p.color}" id="amt-${i}">R$ 0,00</span>
+  const card = document.createElement('div')
+  card.className = 'slider-card'
+  card.innerHTML = `
+    <div class="slider-stripe" style="background:${p.hex}"></div>
+    <div class="slider-body">
+      <div class="slider-header">
+        <span class="slider-name" style="color:${p.hex}">${p.name}</span>
+        <span class="slider-pct" id="pct-${i}">0%</span>
+      </div>
+      <span class="slider-amount" style="color:${p.hex}" id="amt-${i}">R$ 0,00</span>
+      <input type="range" min="0" max="100" value="0"
+             id="range-${i}"
+             style="background: linear-gradient(to right, ${p.hex} 0%, ${p.hex} 0%, var(--border) 0%)" />
     </div>
-    <input type="range" min="0" max="100" value="0"
-           id="range-${i}"
-           style="--thumb-color:${p.color};
-                  background: linear-gradient(to right, ${p.color} 0%, ${p.color} 0%, var(--border) 0%)" />
   `
-  slidersEl.appendChild(row)
+  slidersEl.appendChild(card)
 
   const li = document.createElement('div')
   li.className = 'legend-item'
   li.innerHTML = `
-    <span class="legend-dot" style="background:${p.color}"></span>
+    <span class="legend-pip" style="background:${p.hex}"></span>
     <span class="legend-name">${p.name}</span>
-    <span class="legend-val" id="leg-${i}">0%</span>
+    <span class="legend-pct" id="leg-${i}">0%</span>
   `
   legendEl.appendChild(li)
 })
 
-// --- DONUT ---
-const canvas = document.getElementById('donut')
-const ctx    = canvas.getContext('2d')
-
-function drawDonut(values) {
-  const total = values.reduce((a,b) => a+b, 0) || 100
-  const cx = canvas.width  / 2
-  const cy = canvas.height / 2
-  const r  = 85
-  const inner = 52
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-  let start = -Math.PI / 2
-  values.forEach((v, i) => {
-    const slice = (v / total) * Math.PI * 2
-    ctx.beginPath()
-    ctx.moveTo(cx, cy)
-    ctx.arc(cx, cy, r, start, start + slice)
-    ctx.closePath()
-    ctx.fillStyle = COLORS[i]
-    ctx.fill()
-    start += slice
+// --- CHART.JS DONUT ---
+function initDonut() {
+  const canvas = document.getElementById('donut')
+  donutChart = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [...pcts],
+        backgroundColor: COLORS,
+        borderWidth: 0,
+        borderRadius: 0,
+        spacing: 0,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '62%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false },
+      },
+      animation: { duration: 300, easing: 'easeInOutQuart' },
+    }
   })
-
-  ctx.beginPath()
-  ctx.arc(cx, cy, inner, 0, Math.PI * 2)
-  ctx.fillStyle = '#0d0d0f'
-  ctx.fill()
-
-  const sum = values.reduce((a,b) => a+b, 0)
-  ctx.fillStyle = '#e8e8f0'
-  ctx.font = `700 1.5rem DM Sans, sans-serif`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText(`${sum}%`, cx, cy - 8)
-  ctx.fillStyle = '#6b6b80'
-  ctx.font = `400 0.65rem DM Sans, sans-serif`
-  ctx.fillText('Total', cx, cy + 12)
 }
 
-// --- UPDATE ---
+function updateDonut(values) {
+  const sum = values.reduce((a,b) => a+b, 0)
+  const el = document.getElementById('donutTotal')
+  el.textContent = sum + '%'
+  el.className = 'donut-inner-n' + (sum > 100 ? ' over' : sum === 100 ? ' ok' : '')
+
+  if (donutChart) {
+    donutChart.data.datasets[0].data = [...values]
+    donutChart.update('none')
+  }
+}
+
+// --- FORMAT ---
 function fmt(val) {
   return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+// --- UPDATE ---
 function update() {
   const sum = pcts.reduce((a,b) => a+b, 0)
 
-  const bar = document.getElementById('sumBar')
+  const bar    = document.getElementById('sumBar')
   const sumVal = document.getElementById('sumVal')
-  bar.style.width = Math.min(sum, 100) + '%'
+  bar.style.width      = Math.min(sum, 100) + '%'
   bar.style.background = sum > 100 ? 'var(--danger)' : sum === 100 ? 'var(--accent)' : 'var(--accent-dim)'
-  sumVal.textContent = sum + '%'
-  sumVal.className = 'sum-value' + (sum > 100 ? ' over' : sum === 100 ? ' ok' : '')
+  sumVal.textContent   = sum + '%'
+  sumVal.className     = 'sum-value' + (sum > 100 ? ' over' : sum === 100 ? ' ok' : '')
 
-  POCKETS.forEach((_, i) => {
-    const v = pcts[i]
+  POCKETS.forEach((p, i) => {
+    const v     = pcts[i]
     const range = document.getElementById(`range-${i}`)
     const pct   = document.getElementById(`pct-${i}`)
     const amt   = document.getElementById(`amt-${i}`)
     const leg   = document.getElementById(`leg-${i}`)
 
     range.value = v
-    range.style.background = `linear-gradient(to right, ${COLORS[i]} ${v}%, ${COLORS[i]} ${v}%, var(--border) ${v}%)`
+    range.style.background = `linear-gradient(to right, ${p.hex} ${v}%, var(--border) ${v}%)`
     pct.textContent = v + '%'
     amt.textContent = fmt(salary * v / 100)
     leg.textContent = v + '%'
   })
 
-  drawDonut(pcts)
+  updateDonut(pcts)
 }
 
 // --- EVENTS ---
 POCKETS.forEach((_, i) => {
   document.getElementById(`range-${i}`).addEventListener('input', e => {
-    const newVal = parseInt(e.target.value)
-    const somaOutros = pcts.reduce((acc, v, idx) => idx === i ? acc : acc + v, 0)
-    const maximo = 100 - somaOutros
-    pcts[i] = Math.min(newVal, maximo)
+    const newVal      = parseInt(e.target.value)
+    const somaOutros  = pcts.reduce((acc, v, idx) => idx === i ? acc : acc + v, 0)
+    const maximo      = 100 - somaOutros
+    pcts[i]           = Math.min(newVal, maximo)
     update()
   })
 })
@@ -135,7 +137,7 @@ document.getElementById('salary').addEventListener('input', e => {
 })
 
 document.getElementById('btnReset').addEventListener('click', () => {
-  pcts = [...DEFAULT_PCTS]
+  pcts   = [...DEFAULT_PCTS]
   salary = 0
   document.getElementById('salary').value = ''
   update()
@@ -176,10 +178,7 @@ document.getElementById('btnSave').addEventListener('click', async () => {
 async function loadConfig() {
   try {
     const res = await fetch(`${API}/config`)
-    if (!res.ok) {
-      update()
-      return
-    }
+    if (!res.ok) { update(); return }
     const data = await res.json()
 
     salary = parseFloat(data.salary)
@@ -195,4 +194,5 @@ async function loadConfig() {
   }
 }
 
+initDonut()
 loadConfig()
