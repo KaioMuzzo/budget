@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express'
-import { listBoxes, createBox, updateBox, deleteBox, listBoxTransactions } from './investments.service'
+import { listBoxes, createBox, updateBox, getBox, deleteBox, listBoxTransactions, deleteBoxTransaction } from './investments.service'
 
 export async function getBoxes(req: Request, res: Response, next: NextFunction) {
   try {
@@ -9,9 +9,17 @@ export async function getBoxes(req: Request, res: Response, next: NextFunction) 
   }
 }
 
+export async function getBoxById(req: Request, res: Response, next: NextFunction) {
+  try {
+    res.json(await getBox(Number(req.params.id)))
+  } catch (err) {
+    next(err)
+  }
+}
+
 export async function postBox(req: Request, res: Response, next: NextFunction) {
   try {
-    res.status(201).json(await createBox(req.body.name))
+    res.status(201).json(await createBox(req.body.name, req.body.goal))
   } catch (err) {
     next(err)
   }
@@ -19,7 +27,7 @@ export async function postBox(req: Request, res: Response, next: NextFunction) {
 
 export async function patchBox(req: Request, res: Response, next: NextFunction) {
   try {
-    res.json(await updateBox(Number(req.params.id), req.body.name))
+    res.json(await updateBox(Number(req.params.id), req.body.name, req.body.goal))
   } catch (err) {
     next(err)
   }
@@ -27,7 +35,16 @@ export async function patchBox(req: Request, res: Response, next: NextFunction) 
 
 export async function getBoxTransactions(req: Request, res: Response, next: NextFunction) {
   try {
-    res.json(await listBoxTransactions(Number(req.params.id)))
+    res.json(await listBoxTransactions(Number(req.params.id), req.query.month as string | undefined))
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function removeBoxTransaction(req: Request, res: Response, next: NextFunction) {
+  try {
+    await deleteBoxTransaction(Number(req.params.boxId), Number(req.params.txId))
+    res.status(204).send()
   } catch (err) {
     next(err)
   }

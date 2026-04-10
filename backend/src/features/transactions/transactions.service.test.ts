@@ -216,9 +216,30 @@ describe('createTransaction', () => {
       .rejects.toMatchObject({ code: 'CATEGORY_NOT_FOUND' })
   })
 
-  it('throws TRANSACTION_DESCRIPTION_REQUIRED for empty description', async () => {
+  it('throws TRANSACTION_DESCRIPTION_REQUIRED for empty description on expense', async () => {
     await expect(createTransaction('', 100, 'EXPENSE', '2026-04-05', categoryId, null, null))
       .rejects.toMatchObject({ code: 'TRANSACTION_DESCRIPTION_REQUIRED' })
+  })
+
+  it('throws TRANSACTION_DESCRIPTION_REQUIRED for null description on expense', async () => {
+    await expect(createTransaction(null, 100, 'EXPENSE', '2026-04-05', categoryId, null, null))
+      .rejects.toMatchObject({ code: 'TRANSACTION_DESCRIPTION_REQUIRED' })
+  })
+
+  it('uses "Aporte" as fallback when deposit has no description', async () => {
+    const t = await createTransaction(null, 200, 'INVESTMENT', '2026-04-05', null, 'DEPOSIT', boxId)
+    expect(t.description).toBe('Aporte')
+  })
+
+  it('uses "Resgate" as fallback when withdrawal has no description', async () => {
+    await createDeposit(500, '2026-04-01')
+    const t = await createTransaction('', 100, 'INVESTMENT', '2026-04-05', null, 'WITHDRAWAL', boxId)
+    expect(t.description).toBe('Resgate')
+  })
+
+  it('keeps explicit description on investment when provided', async () => {
+    const t = await createTransaction('Aporte mensal', 200, 'INVESTMENT', '2026-04-05', null, 'DEPOSIT', boxId)
+    expect(t.description).toBe('Aporte mensal')
   })
 
   it('throws TRANSACTION_AMOUNT_INVALID for zero', async () => {

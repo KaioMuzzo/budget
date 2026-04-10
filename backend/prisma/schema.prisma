@@ -40,7 +40,7 @@ model Category {
 
 model Transaction {
   id          Int             @id @default(autoincrement())
-  description String
+  description String?
   amount      Decimal         @db.Decimal(10, 2)
   type        TransactionType
   date        DateTime
@@ -55,6 +55,7 @@ model Transaction {
 model InvestmentBox {
   id           Int           @id @default(autoincrement())
   name         String
+  goal         Decimal?      @db.Decimal(10, 2)
   created_at   DateTime      @default(now())
   updated_at   DateTime      @updatedAt
   transactions Transaction[]

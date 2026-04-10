@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Budget — Detalhe</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;800&family=JetBrains+Mono:wght@400;600&family=Cormorant+Garamond:wght@600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { overflow-x: hidden; }
 
@@ -14,19 +15,146 @@
       display: flex;
       flex-direction: column;
       flex: 1;
-      padding: 2.5rem;
-      gap: 1.5rem;
+      padding: 0;
     }
 
-    .detail-header {
+    /* ── HERO ──────────────────────────────────────────────── */
+    .hero {
       display: flex;
       align-items: center;
-      gap: 1.5rem;
+      justify-content: space-between;
+      padding: 2.75rem 3rem 2.5rem;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+      background: var(--surface);
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 52px 52px;
+      opacity: 0.25;
+      pointer-events: none;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      right: 0; top: 0; bottom: 0;
+      width: 55%;
+      background: radial-gradient(ellipse at 80% 50%, rgba(168,255,62,0.07) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    .hero-left {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      position: relative;
+      z-index: 1;
+      animation: fadeIn 0.6s ease both;
+    }
+
+    .hero-eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .hero-eyebrow::before {
+      content: '';
+      width: 24px;
+      height: 1px;
+      background: var(--muted);
+    }
+
+    .hero-name-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: 0.6rem;
+    }
+
+    .hero-name {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--text);
+      cursor: pointer;
+      border-bottom: 1px dashed transparent;
+      transition: border-color 0.2s;
+      line-height: 1;
+    }
+
+    .hero-name:hover { border-color: var(--muted); }
+
+    .hero-name-input {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      background: none;
+      border: none;
+      border-bottom: 1.5px solid var(--accent);
+      color: var(--text);
+      outline: none;
+      width: 340px;
+      display: none;
+      line-height: 1;
+    }
+
+    .hint-rename {
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .hero-name-wrap:hover .hint-rename { opacity: 1; }
+
+    .hero-balance {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      display: flex;
+      align-items: baseline;
+      gap: 0.15em;
+    }
+
+    .hero-currency { font-size: 1.5rem; color: var(--muted); font-weight: 400; letter-spacing: 0; }
+    .hero-amount   { font-size: 3.8rem; color: var(--text); }
+    .hero-cents    { font-size: 1.8rem; color: var(--muted); font-weight: 400; }
+
+    .hero-actions {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 1rem;
+      animation: fadeIn 0.6s 0.1s ease both;
+    }
+
+    .hero-btns {
+      display: flex;
+      gap: 0.75rem;
     }
 
     .btn-back {
       font-family: var(--font-display);
-      font-size: 0.82rem;
+      font-size: 0.75rem;
       font-weight: 600;
       color: var(--muted);
       text-decoration: none;
@@ -34,77 +162,217 @@
       border-radius: 6px;
       padding: 0.5rem 0.9rem;
       transition: color 0.2s, border-color 0.2s;
-      flex-shrink: 0;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
     }
-
     .btn-back:hover { color: var(--text); border-color: var(--muted); }
 
-    .box-info {
+    .btn-withdraw {
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      background: none;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.55rem 1.1rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-withdraw:hover { border-color: var(--expense); color: var(--expense); }
+
+    .btn-deposit {
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      background: var(--accent);
+      color: #0d0d0f;
+      border: none;
+      border-radius: 6px;
+      padding: 0.55rem 1.1rem;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .btn-deposit:hover { opacity: 0.85; transform: translateY(-1px); }
+
+    /* ── STATS BAR ──────────────────────────────────────────── */
+    .stats-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat-block {
+      flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
-      flex: 1;
+      gap: 0.3rem;
+      padding: 1.3rem 2rem;
+      border-right: 1px solid var(--border);
+      animation: fadeIn 0.5s ease both;
     }
+    .stat-block:nth-child(1) { animation-delay: 0.08s; }
+    .stat-block:nth-child(2) { animation-delay: 0.13s; }
+    .stat-block:nth-child(3) { animation-delay: 0.18s; }
+    .stat-block:nth-child(4) { animation-delay: 0.23s; }
+    .stat-block:last-child { border-right: none; }
 
-    .box-name {
-      font-size: 1.3rem;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-    }
-
-    .box-balance-label {
-      font-size: 0.72rem;
+    .stat-lbl {
+      font-size: 0.65rem;
       font-weight: 600;
       letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--muted);
     }
 
-    .box-balance {
+    .stat-val {
       font-family: var(--font-mono);
-      font-size: 1.5rem;
+      font-size: 1rem;
       font-weight: 600;
-      color: #fbbf24;
+      color: var(--text);
     }
+    .stat-val.green { color: var(--accent); }
+    .stat-val.blue  { color: var(--income); }
+    .stat-val.pink  { color: var(--expense); }
 
-    .header-actions {
+    .stat-sub { font-size: 0.7rem; color: var(--muted); }
+
+    .stat-meta {
       display: flex;
-      gap: 0.75rem;
+      flex-direction: column;
+      gap: 0.45rem;
     }
 
-    .btn-deposit {
-      font-family: var(--font-display);
-      font-size: 0.82rem;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
+    .stat-meta-top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+
+    .progress-track {
+      height: 3px;
+      background: var(--surface2);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 100px;
       background: var(--accent);
-      color: #0d0d0f;
-      border: none;
-      border-radius: 6px;
-      padding: 0.65rem 1.25rem;
-      cursor: pointer;
-      transition: opacity 0.2s, transform 0.15s;
+      width: 0%;
+      transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
     }
 
-    .btn-deposit:hover { opacity: 0.85; transform: translateY(-1px); }
+    /* ── SPARK CARDS ─────────────────────────────────────────── */
+    .spark-section {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+    }
 
-    .btn-withdraw {
-      font-family: var(--font-display);
-      font-size: 0.82rem;
-      font-weight: 700;
-      letter-spacing: 0.05em;
+    .spark-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding: 1.4rem 2rem 0;
+      border-right: 1px solid var(--border);
+      animation: fadeIn 0.5s ease both;
+      overflow: hidden;
+    }
+    .spark-card:last-child { border-right: none; }
+    .spark-card:nth-child(1) { animation-delay: 0.12s; }
+    .spark-card:nth-child(2) { animation-delay: 0.18s; }
+
+    .spark-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+
+    .spark-info { display: flex; flex-direction: column; gap: 0.2rem; }
+
+    .spark-lbl {
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
-      background: none;
       color: var(--muted);
+    }
+
+    .spark-val {
+      font-family: var(--font-mono);
+      font-size: 1.4rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    .spark-val.income  { color: var(--income); }
+    .spark-val.expense { color: var(--expense); }
+
+    .spark-delta {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      align-self: flex-start;
+      margin-top: 0.1rem;
+    }
+    .spark-delta.up   { background: rgba(168,255,62,0.1);   color: var(--accent);  }
+    .spark-delta.down { background: rgba(244,114,182,0.12); color: var(--expense); }
+
+    .sparkline-wrap {
+      position: relative;
+      width: 100%;
+      margin-top: 0.25rem;
+    }
+
+    .sparkline-wrap canvas {
+      width: 100% !important;
+      height: 64px !important;
+    }
+
+    /* ── TABLE SECTION ──────────────────────────────────────── */
+    .table-section {
+      display: flex;
+      flex-direction: column;
+      padding: 1.75rem 2.5rem 2.5rem;
+      gap: 1rem;
+      animation: fadeIn 0.5s 0.28s ease both;
+    }
+
+    .table-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .section-title {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .filter-select {
+      font-family: var(--font-display);
+      font-size: 0.78rem;
+      font-weight: 600;
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 6px;
-      padding: 0.65rem 1.25rem;
+      color: var(--text);
+      padding: 0.4rem 0.75rem;
+      outline: none;
       cursor: pointer;
-      transition: border-color 0.2s, color 0.2s;
+      transition: border-color 0.2s;
     }
-
-    .btn-withdraw:hover { border-color: var(--accent); color: var(--accent); }
+    .filter-select:focus { border-color: var(--accent); }
 
     .table-wrap {
       background: var(--surface);
@@ -116,7 +384,7 @@
     table { width: 100%; border-collapse: collapse; }
 
     thead th {
-      font-size: 0.7rem;
+      font-size: 0.67rem;
       font-weight: 600;
       letter-spacing: 0.1em;
       text-transform: uppercase;
@@ -131,28 +399,42 @@
       transition: background 0.15s;
       animation: fadeIn 0.3s ease both;
     }
-
     tbody tr:last-child { border-bottom: none; }
     tbody tr:hover { background: var(--surface2); }
-    tbody td { padding: 0.9rem 1.25rem; font-size: 0.88rem; }
+    tbody td { padding: 0.9rem 1.25rem; font-size: 0.86rem; }
 
     .td-type {
       display: inline-flex;
       align-items: center;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 600;
       border-radius: 20px;
       padding: 0.2rem 0.65rem;
     }
-
-    .td-type.deposit    { background: rgba(168,255,62,0.1);  color: var(--accent); }
+    .td-type.deposit    { background: rgba(168,255,62,0.1);   color: var(--accent);  }
     .td-type.withdrawal { background: rgba(244,114,182,0.12); color: var(--expense); }
 
     .td-amount { font-family: var(--font-mono); font-weight: 600; font-size: 0.88rem; }
     .td-amount.deposit    { color: var(--accent);  }
     .td-amount.withdrawal { color: var(--expense); }
 
-    .td-date { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
+    .td-date { font-family: var(--font-mono); font-size: 0.76rem; color: var(--muted); }
+    .td-desc { font-size: 0.82rem; color: var(--muted); }
+    .td-desc.empty { font-style: italic; opacity: 0.35; }
+
+    .btn-delete-tx {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.82rem;
+      padding: 0.25rem 0.4rem;
+      border-radius: 4px;
+      transition: color 0.2s, background 0.2s;
+      opacity: 0;
+    }
+    tbody tr:hover .btn-delete-tx { opacity: 1; }
+    .btn-delete-tx:hover { color: var(--danger); background: rgba(255,78,78,0.08); }
 
     .empty-state {
       display: flex;
@@ -163,7 +445,10 @@
       font-size: 0.88rem;
     }
 
-    /* OVERLAY */
+    td:last-child { text-align: right; white-space: nowrap; }
+    th:last-child { text-align: right; }
+
+    /* ── OVERLAY + PANELS ──────────────────────────────────── */
     .overlay {
       position: fixed;
       inset: 0;
@@ -173,14 +458,11 @@
       transition: opacity 0.3s;
       z-index: 10;
     }
-
     .overlay.open { opacity: 1; pointer-events: all; }
 
-    /* SIDE PANEL */
     .side-panel {
       position: fixed;
-      top: 0;
-      right: 0;
+      top: 0; right: 0;
       width: 380px;
       height: 100vh;
       background: var(--surface);
@@ -188,10 +470,9 @@
       display: flex;
       flex-direction: column;
       transform: translateX(100%);
-      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
       z-index: 20;
     }
-
     .side-panel.open { transform: translateX(0); }
 
     .panel-header {
@@ -202,7 +483,6 @@
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
-
     .panel-title { font-size: 1rem; font-weight: 800; letter-spacing: -0.02em; }
 
     .btn-close {
@@ -210,16 +490,12 @@
       border: 1px solid var(--border);
       border-radius: 6px;
       color: var(--muted);
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
       cursor: pointer;
       font-size: 1rem;
       transition: color 0.2s, border-color 0.2s;
     }
-
     .btn-close:hover { color: var(--text); border-color: var(--muted); }
 
     .panel-body {
@@ -247,7 +523,7 @@
       color: var(--muted);
     }
 
-    .field input {
+    .field input, .field textarea {
       font-family: var(--font-display);
       font-size: 0.9rem;
       background: var(--bg);
@@ -259,8 +535,8 @@
       transition: border-color 0.2s;
       width: 100%;
     }
-
-    .field input:focus { border-color: var(--accent); }
+    .field input:focus, .field textarea:focus { border-color: var(--accent); }
+    .field textarea { resize: none; height: 72px; }
 
     .btn-submit {
       width: 100%;
@@ -277,7 +553,6 @@
       cursor: pointer;
       transition: opacity 0.2s;
     }
-
     .btn-submit:hover { opacity: 0.85; }
 
     .field-error {
@@ -286,7 +561,6 @@
       color: var(--danger);
       display: none;
     }
-
     .field-error.visible { display: block; }
   </style>
 </head>
@@ -301,30 +575,122 @@
 </nav>
 
 <main>
-  <div class="detail-header">
-    <a href="investments.html" class="btn-back">← Voltar</a>
-    <div class="box-info">
-      <span class="box-name" id="boxName">—</span>
-      <span class="box-balance" id="boxBalance">—</span>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-left">
+      <span class="hero-eyebrow">Caixinha</span>
+      <div class="hero-name-wrap">
+        <span class="hero-name" id="heroName">—</span>
+        <input class="hero-name-input" id="heroNameInput" type="text" />
+        <span class="hint-rename">clique para editar</span>
+      </div>
+      <div class="hero-balance">
+        <span class="hero-currency">R$</span>
+        <span class="hero-amount" id="heroAmount">—</span>
+        <span class="hero-cents" id="heroCents"></span>
+      </div>
     </div>
-    <div class="header-actions">
-      <button class="btn-withdraw" id="btnWithdraw">Resgate</button>
-      <button class="btn-deposit" id="btnDeposit">Aporte</button>
+    <div class="hero-actions">
+      <a href="investments.html" class="btn-back">← Voltar</a>
+      <div class="hero-btns">
+        <button class="btn-withdraw" id="btnWithdraw">Resgate</button>
+        <button class="btn-deposit" id="btnDeposit">Aporte</button>
+      </div>
     </div>
   </div>
 
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Tipo</th>
-          <th>Data</th>
-          <th>Valor</th>
-        </tr>
-      </thead>
-      <tbody id="tbody"></tbody>
-    </table>
+  <!-- STATS BAR -->
+  <div class="stats-bar">
+    <div class="stat-block">
+      <span class="stat-lbl">Total aportado</span>
+      <span class="stat-val blue" id="statDeposited">—</span>
+    </div>
+    <div class="stat-block">
+      <span class="stat-lbl">Total resgatado</span>
+      <span class="stat-val pink" id="statWithdrawn">—</span>
+    </div>
+    <div class="stat-block">
+      <span class="stat-lbl">Movimentos</span>
+      <span class="stat-val" id="statCount">—</span>
+      <span class="stat-sub" id="statSince"></span>
+    </div>
+    <div class="stat-block">
+      <!-- com meta -->
+      <div id="goalBlock" style="display:none">
+        <div class="stat-meta">
+          <div class="stat-meta-top">
+            <span class="stat-lbl">Meta</span>
+            <span class="stat-val green" id="statGoalPct" style="font-size:.82rem">0%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="goalFill"></div>
+          </div>
+          <span class="stat-sub" id="statGoalSub"></span>
+        </div>
+      </div>
+      <!-- sem meta -->
+      <div id="noGoalBlock">
+        <span class="stat-lbl">Meta</span>
+        <span class="stat-val" style="color:var(--muted)">—</span>
+        <span class="stat-sub">não definida</span>
+      </div>
+    </div>
   </div>
+
+  <!-- SPARK CARDS -->
+  <div class="spark-section">
+    <div class="spark-card">
+      <div class="spark-header">
+        <div class="spark-info">
+          <span class="spark-lbl">Aportes mensais</span>
+          <span class="spark-val income" id="sparkDepositedVal">—</span>
+        </div>
+        <span class="spark-delta up" id="sparkDepositedDelta"></span>
+      </div>
+      <div class="sparkline-wrap">
+        <canvas id="chartIncome"></canvas>
+      </div>
+    </div>
+    <div class="spark-card">
+      <div class="spark-header">
+        <div class="spark-info">
+          <span class="spark-lbl">Resgates mensais</span>
+          <span class="spark-val expense" id="sparkWithdrawnVal">—</span>
+        </div>
+        <span class="spark-delta down" id="sparkWithdrawnDelta"></span>
+      </div>
+      <div class="sparkline-wrap">
+        <canvas id="chartExpense"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABELA -->
+  <div class="table-section">
+    <div class="table-toolbar">
+      <span class="section-title">Histórico</span>
+      <select class="filter-select" id="monthFilter">
+        <option value="">Todos os meses</option>
+      </select>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Data</th>
+            <th>Descrição</th>
+            <th style="text-align:right">Valor</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
 </main>
 
 <div class="overlay" id="overlay"></div>
@@ -345,6 +711,10 @@
       <label>Data</label>
       <input type="date" id="fDepositDate" />
       <span class="field-error" id="errDepositDate">Data inválida</span>
+    </div>
+    <div class="field">
+      <label>Descrição <span style="opacity:.4;font-size:.65rem;text-transform:none;letter-spacing:0">(opcional)</span></label>
+      <input type="text" id="fDepositDesc" placeholder="Ex: Salário abril" />
     </div>
   </div>
   <div class="panel-footer">
@@ -369,12 +739,439 @@
       <input type="date" id="fWithdrawDate" />
       <span class="field-error" id="errWithdrawDate">Data inválida</span>
     </div>
+    <div class="field">
+      <label>Descrição <span style="opacity:.4;font-size:.65rem;text-transform:none;letter-spacing:0">(opcional)</span></label>
+      <input type="text" id="fWithdrawDesc" placeholder="Ex: Conserto do carro" />
+    </div>
   </div>
   <div class="panel-footer">
     <button class="btn-submit" id="btnSubmitWithdraw">Confirmar Resgate</button>
   </div>
 </div>
 
-<script src="js/investment-detail.js"></script>
+<script>
+  const API    = 'http://localhost:3333/api'
+  const params = new URLSearchParams(location.search)
+  const boxId  = parseInt(params.get('id'))
+  if (!boxId) location.href = 'investments.html'
+
+  const fmt     = v   => parseFloat(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  const fmtDate = iso => new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+
+  const MONTH_NAMES = [
+    'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+    'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
+  ]
+
+  // ── BALANCE ──────────────────────────────────────────────
+  function renderBalance(val) {
+    const str = parseFloat(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    const comma = str.lastIndexOf(',')
+    document.getElementById('heroAmount').textContent = str.slice(0, comma)
+    document.getElementById('heroCents').textContent  = str.slice(comma)
+  }
+
+  // ── HERO RENAME ──────────────────────────────────────────
+  const heroName      = document.getElementById('heroName')
+  const heroNameInput = document.getElementById('heroNameInput')
+
+  heroName.addEventListener('click', () => {
+    heroName.style.display      = 'none'
+    heroNameInput.style.display = 'block'
+    heroNameInput.focus()
+    heroNameInput.select()
+  })
+
+  async function saveName() {
+    const val = heroNameInput.value.trim()
+    if (val && val !== heroName.textContent) {
+      try {
+        const res = await fetch(`${API}/investments/${boxId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: val }),
+        })
+        if (res.ok) heroName.textContent = val
+      } catch {}
+    }
+    heroNameInput.style.display = 'none'
+    heroName.style.display      = ''
+  }
+
+  heroNameInput.addEventListener('blur', saveName)
+  heroNameInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveName()
+    if (e.key === 'Escape') {
+      heroNameInput.value         = heroName.textContent
+      heroNameInput.style.display = 'none'
+      heroName.style.display      = ''
+    }
+  })
+
+  // ── PANELS ───────────────────────────────────────────────
+  const overlay = document.getElementById('overlay')
+
+  function openPanel(id) {
+    closeAll()
+    document.getElementById(id).classList.add('open')
+    overlay.classList.add('open')
+  }
+
+  function closeAll() {
+    ;['panelDeposit', 'panelWithdraw'].forEach(id =>
+      document.getElementById(id).classList.remove('open'))
+    overlay.classList.remove('open')
+  }
+
+  overlay.addEventListener('click', closeAll)
+  document.getElementById('closeDeposit').addEventListener('click', closeAll)
+  document.getElementById('closeWithdraw').addEventListener('click', closeAll)
+
+  document.getElementById('btnDeposit').addEventListener('click', () => {
+    document.getElementById('fDepositDate').value   = new Date().toISOString().split('T')[0]
+    document.getElementById('fDepositAmount').value = ''
+    document.getElementById('fDepositDesc').value   = ''
+    ;['errDepositAmount', 'errDepositDate'].forEach(id =>
+      document.getElementById(id).classList.remove('visible'))
+    openPanel('panelDeposit')
+  })
+
+  document.getElementById('btnWithdraw').addEventListener('click', () => {
+    document.getElementById('fWithdrawDate').value   = new Date().toISOString().split('T')[0]
+    document.getElementById('fWithdrawAmount').value = ''
+    document.getElementById('fWithdrawDesc').value   = ''
+    ;['errWithdrawAmount', 'errWithdrawDate'].forEach(id =>
+      document.getElementById(id).classList.remove('visible'))
+    openPanel('panelWithdraw')
+  })
+
+  // ── SUBMIT DEPOSIT ────────────────────────────────────────
+  document.getElementById('btnSubmitDeposit').addEventListener('click', async () => {
+    const amount = parseFloat(document.getElementById('fDepositAmount').value)
+    const date   = document.getElementById('fDepositDate').value
+    const desc   = document.getElementById('fDepositDesc').value.trim()
+    let valid = true
+
+    const check = (cond, errId) => {
+      if (cond) { document.getElementById(errId).classList.add('visible'); valid = false }
+      else        document.getElementById(errId).classList.remove('visible')
+    }
+
+    check(!amount || amount <= 0, 'errDepositAmount')
+    check(!date,                  'errDepositDate')
+    if (!valid) return
+
+    const body = { amount, type: 'INVESTMENT', sub_type: 'DEPOSIT', date, box_id: boxId }
+    if (desc) body.description = desc
+
+    try {
+      const res = await fetch(`${API}/transactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) throw new Error()
+      closeAll()
+      loadAll()
+    } catch { alert('Erro ao registrar aporte.') }
+  })
+
+  // ── SUBMIT WITHDRAWAL ─────────────────────────────────────
+  document.getElementById('btnSubmitWithdraw').addEventListener('click', async () => {
+    const amount = parseFloat(document.getElementById('fWithdrawAmount').value)
+    const date   = document.getElementById('fWithdrawDate').value
+    const desc   = document.getElementById('fWithdrawDesc').value.trim()
+    let valid = true
+
+    const check = (cond, errId) => {
+      if (cond) { document.getElementById(errId).classList.add('visible'); valid = false }
+      else        document.getElementById(errId).classList.remove('visible')
+    }
+
+    check(!amount || amount <= 0, 'errWithdrawAmount')
+    check(!date,                  'errWithdrawDate')
+    if (!valid) return
+
+    const body = { amount, type: 'INVESTMENT', sub_type: 'WITHDRAWAL', date, box_id: boxId }
+    if (desc) body.description = desc
+
+    try {
+      const res = await fetch(`${API}/transactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        if (d.error === 'INSUFFICIENT_BALANCE') alert('Saldo insuficiente para este resgate.')
+        else alert('Erro ao registrar resgate.')
+        return
+      }
+      closeAll()
+      loadAll()
+    } catch { alert('Erro ao registrar resgate.') }
+  })
+
+  // ── CHARTS ───────────────────────────────────────────────
+  let chartIncome, chartExpense
+
+  const chartDefaults = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1e1e24',
+        borderColor: '#2a2a30',
+        borderWidth: 1,
+        titleColor: '#6b6b80',
+        bodyColor: '#e8e8f0',
+        titleFont: { family: "'DM Sans'", size: 10, weight: '600' },
+        bodyFont: { family: "'JetBrains Mono'", size: 13, weight: '600' },
+        padding: 10,
+        displayColors: false,
+        callbacks: {
+          label: ctx => parseFloat(ctx.raw).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: '#2a2a30', tickLength: 0 },
+        ticks: { display: false },
+        border: { display: false }
+      },
+      y: {
+        grid: { display: false },
+        ticks: { display: false },
+        border: { display: false }
+      }
+    }
+  }
+
+  function makeGradient(ctx, color) {
+    const g = ctx.createLinearGradient(0, 0, 0, 64)
+    g.addColorStop(0, color.replace('1)', '0.28)'))
+    g.addColorStop(1, color.replace('1)', '0)'))
+    return g
+  }
+
+  function renderSparks(monthly) {
+    const labels        = monthly.map(m => {
+      const [y, mo] = m.month.split('-')
+      return MONTH_NAMES[parseInt(mo) - 1].slice(0, 3) + ' ' + y
+    })
+    const depositedData = monthly.map(m => parseFloat(m.deposited))
+    const withdrawnData = monthly.map(m => parseFloat(m.withdrawn))
+
+    const last    = monthly.length - 1
+    const curDep  = depositedData[last]
+    const prevDep = depositedData[last - 1] ?? 0
+    const curWit  = withdrawnData[last]
+    const prevWit = withdrawnData[last - 1] ?? 0
+
+    // Deposit spark header
+    document.getElementById('sparkDepositedVal').textContent = fmt(curDep)
+    const depDeltaEl  = document.getElementById('sparkDepositedDelta')
+    const depDiff     = curDep - prevDep
+    depDeltaEl.textContent = depDiff >= 0
+      ? `+${fmt(depDiff)} vs mês ant.`
+      : `${fmt(depDiff)} vs mês ant.`
+    depDeltaEl.className = `spark-delta ${depDiff >= 0 ? 'up' : 'down'}`
+
+    // Withdrawal spark header
+    document.getElementById('sparkWithdrawnVal').textContent = fmt(curWit)
+    const witDeltaEl = document.getElementById('sparkWithdrawnDelta')
+    if (curWit === 0) {
+      witDeltaEl.textContent = 'sem resgates'
+      witDeltaEl.className   = 'spark-delta up'
+    } else if (prevWit === 0) {
+      witDeltaEl.textContent = 'único resgate'
+      witDeltaEl.className   = 'spark-delta down'
+    } else {
+      const witDiff = curWit - prevWit
+      witDeltaEl.textContent = witDiff >= 0
+        ? `+${fmt(witDiff)} vs mês ant.`
+        : `${fmt(witDiff)} vs mês ant.`
+      witDeltaEl.className = `spark-delta ${witDiff <= 0 ? 'up' : 'down'}`
+    }
+
+    // Income chart
+    const ctxIncome = document.getElementById('chartIncome').getContext('2d')
+    if (chartIncome) chartIncome.destroy()
+    chartIncome = new Chart(ctxIncome, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data: depositedData,
+          borderColor: '#38bdf8',
+          borderWidth: 1.5,
+          fill: true,
+          backgroundColor: makeGradient(ctxIncome, 'rgba(56,189,248,1)'),
+          tension: 0.3,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointHoverBackgroundColor: '#38bdf8',
+          pointHoverBorderColor: '#0d0d0f',
+          pointHoverBorderWidth: 2,
+        }]
+      },
+      options: chartDefaults
+    })
+
+    // Expense chart
+    const ctxExpense = document.getElementById('chartExpense').getContext('2d')
+    if (chartExpense) chartExpense.destroy()
+    chartExpense = new Chart(ctxExpense, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data: withdrawnData,
+          borderColor: '#f472b6',
+          borderWidth: 1.5,
+          fill: true,
+          backgroundColor: makeGradient(ctxExpense, 'rgba(244,114,182,1)'),
+          tension: 0.3,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointHoverBackgroundColor: '#f472b6',
+          pointHoverBorderColor: '#0d0d0f',
+          pointHoverBorderWidth: 2,
+        }]
+      },
+      options: chartDefaults
+    })
+  }
+
+  // ── GOAL ─────────────────────────────────────────────────
+  function renderGoal(goal, balance) {
+    const goalBlock   = document.getElementById('goalBlock')
+    const noGoalBlock = document.getElementById('noGoalBlock')
+
+    if (!goal) {
+      goalBlock.style.display   = 'none'
+      noGoalBlock.style.display = ''
+      return
+    }
+
+    goalBlock.style.display   = ''
+    noGoalBlock.style.display = 'none'
+
+    const pct = Math.min(100, Math.round((parseFloat(balance) / parseFloat(goal)) * 100))
+    document.getElementById('statGoalPct').textContent  = pct + '%'
+    document.getElementById('goalFill').style.width     = pct + '%'
+    document.getElementById('statGoalSub').textContent  = `${fmt(balance)} de ${fmt(goal)}`
+  }
+
+  // ── MONTH FILTER ─────────────────────────────────────────
+  function populateMonthFilter(monthly) {
+    const sel = document.getElementById('monthFilter')
+    sel.innerHTML = '<option value="">Todos os meses</option>'
+
+    ;[...monthly].reverse().forEach(m => {
+      const [y, mo] = m.month.split('-')
+      const opt     = document.createElement('option')
+      opt.value     = m.month
+      opt.textContent = MONTH_NAMES[parseInt(mo) - 1] + ' ' + y
+      sel.appendChild(opt)
+    })
+
+    // Default: current month
+    const now      = new Date()
+    const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    if (monthly.find(m => m.month === curMonth)) sel.value = curMonth
+  }
+
+  document.getElementById('monthFilter').addEventListener('change', e => {
+    loadTransactions(e.target.value || undefined)
+  })
+
+  // ── RENDER TABLE ─────────────────────────────────────────
+  function renderTransactions(txs) {
+    const tbody = document.getElementById('tbody')
+
+    if (!txs.length) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">Nenhum movimento registrado.</div></td></tr>`
+      return
+    }
+
+    tbody.innerHTML = txs.map((t, i) => {
+      const isDeposit = t.sub_type === 'DEPOSIT'
+      const desc      = t.description || ''
+      return `
+        <tr style="animation-delay:${i * 0.04}s">
+          <td><span class="td-type ${isDeposit ? 'deposit' : 'withdrawal'}">${isDeposit ? 'Aporte' : 'Resgate'}</span></td>
+          <td class="td-date">${fmtDate(t.date)}</td>
+          <td class="td-desc ${desc ? '' : 'empty'}">${desc || '—'}</td>
+          <td class="td-amount ${isDeposit ? 'deposit' : 'withdrawal'}">${isDeposit ? '+' : '-'} ${fmt(t.amount)}</td>
+          <td><button class="btn-delete-tx" data-id="${t.id}" title="Remover">✕</button></td>
+        </tr>
+      `
+    }).join('')
+
+    tbody.querySelectorAll('.btn-delete-tx').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Remover este movimento?')) return
+        try {
+          const res = await fetch(`${API}/investments/${boxId}/transactions/${btn.dataset.id}`, {
+            method: 'DELETE',
+          })
+          if (res.ok) loadAll()
+          else alert('Erro ao remover movimento.')
+        } catch { alert('Erro ao remover movimento.') }
+      })
+    })
+  }
+
+  // ── LOAD ─────────────────────────────────────────────────
+  async function loadTransactions(month) {
+    const url = month
+      ? `${API}/investments/${boxId}/transactions?month=${month}`
+      : `${API}/investments/${boxId}/transactions`
+
+    try {
+      const res = await fetch(url)
+      if (!res.ok) throw new Error()
+      renderTransactions(await res.json())
+    } catch { alert('Erro ao carregar movimentos.') }
+  }
+
+  async function loadAll() {
+    try {
+      const res = await fetch(`${API}/investments/${boxId}`)
+      if (!res.ok) { location.href = 'investments.html'; return }
+      const box = await res.json()
+
+      document.title              = `Budget — ${box.name}`
+      heroName.textContent        = box.name
+      heroNameInput.value         = box.name
+
+      renderBalance(box.balance)
+
+      document.getElementById('statDeposited').textContent = fmt(box.total_deposited)
+      document.getElementById('statWithdrawn').textContent = fmt(box.total_withdrawn)
+      document.getElementById('statCount').textContent     = box.transaction_count
+
+      const d      = new Date(box.created_at)
+      const since  = MONTH_NAMES[d.getMonth()].slice(0, 3).toLowerCase() + '/' + d.getFullYear()
+      document.getElementById('statSince').textContent = `desde ${since}`
+
+      renderGoal(box.goal, box.balance)
+      renderSparks(box.monthly)
+      populateMonthFilter(box.monthly)
+
+      const month = document.getElementById('monthFilter').value
+      await loadTransactions(month || undefined)
+    } catch {
+      alert('Erro ao carregar caixinha.')
+      location.href = 'investments.html'
+    }
+  }
+
+  loadAll()
+</script>
 </body>
 </html>

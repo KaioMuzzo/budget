@@ -8,7 +8,7 @@ type SubType = 'DEPOSIT' | 'WITHDRAWAL'
 
 type TransactionRow = {
   id: number
-  description: string
+  description: string | null
   amount: string
   type: TransactionType
   sub_type: SubType | null
@@ -60,8 +60,14 @@ function validateAmount(amount: unknown): number {
   return amount
 }
 
-function validateDescription(description: unknown): string {
-  if (typeof description !== 'string' || description.trim() === '') {
+function validateDescription(description: unknown, fallback?: string): string {
+  const isEmpty = description === undefined || description === null ||
+    (typeof description === 'string' && description.trim() === '')
+  if (isEmpty) {
+    if (fallback !== undefined) return fallback
+    throw new AppError(ErrorCode.TRANSACTION_DESCRIPTION_REQUIRED)
+  }
+  if (typeof description !== 'string') {
     throw new AppError(ErrorCode.TRANSACTION_DESCRIPTION_REQUIRED)
   }
   return description.trim()
@@ -184,7 +190,6 @@ export async function createTransaction(
   sub_type: unknown,
   box_id: unknown,
 ) {
-  const validDescription = validateDescription(description)
   const validAmount = validateAmount(amount)
   const validType = validateType(type)
   const validDate = validateDate(date)
@@ -192,14 +197,17 @@ export async function createTransaction(
   let validCategoryId: number | null = null
   let validSubType: SubType | null = null
   let validBoxId: number | null = null
+  let validDescription: string
 
   if (validType === 'INVESTMENT') {
     validSubType = validateSubType(sub_type)
+    validDescription = validateDescription(description, validSubType === 'DEPOSIT' ? 'Aporte' : 'Resgate')
     validBoxId = await validateBoxExists(box_id)
     if (validSubType === 'WITHDRAWAL') {
       await checkSufficientBalance(validBoxId, validAmount)
     }
   } else {
+    validDescription = validateDescription(description)
     validCategoryId = await validateCategoryExists(category_id)
   }
 
