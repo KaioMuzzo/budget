@@ -19,10 +19,11 @@ function prevMonth(month: number, year: number): { month: number; year: number }
 async function fetchSummaryRaw(month: number, year: number) {
   const dateFilter = parseDateRange(month, year)
 
+  // YIELD is intentionally excluded — it's not money leaving the account
   const [incomeAgg, expenseAgg, depositAgg, withdrawalAgg] = await Promise.all([
-    prisma.transaction.aggregate({ where: { date: dateFilter, type: 'INCOME' },                          _sum: { amount: true } }),
-    prisma.transaction.aggregate({ where: { date: dateFilter, type: 'EXPENSE' },                         _sum: { amount: true } }),
-    prisma.transaction.aggregate({ where: { date: dateFilter, type: 'INVESTMENT', sub_type: 'DEPOSIT' }, _sum: { amount: true } }),
+    prisma.transaction.aggregate({ where: { date: dateFilter, type: 'INCOME' },                             _sum: { amount: true } }),
+    prisma.transaction.aggregate({ where: { date: dateFilter, type: 'EXPENSE' },                            _sum: { amount: true } }),
+    prisma.transaction.aggregate({ where: { date: dateFilter, type: 'INVESTMENT', sub_type: 'DEPOSIT' },    _sum: { amount: true } }),
     prisma.transaction.aggregate({ where: { date: dateFilter, type: 'INVESTMENT', sub_type: 'WITHDRAWAL' }, _sum: { amount: true } }),
   ])
 
@@ -36,8 +37,13 @@ async function fetchSummaryRaw(month: number, year: number) {
 }
 
 export async function getSummary(month: number, year: number) {
-  const { income, expense, investment } = await fetchSummaryRaw(month, year)
-  const balance = new Prisma.Decimal(income).sub(expense).sub(investment)
+  const [{ income, expense, investment }, config] = await Promise.all([
+    fetchSummaryRaw(month, year),
+    prisma.budgetConfig.findFirst({ select: { initial_balance: true } }),
+  ])
+
+  const configInitialBalance = config?.initial_balance ?? new Prisma.Decimal(0)
+  const balance = new Prisma.Decimal(configInitialBalance).add(income).sub(expense).sub(investment)
 
   return {
     income:     income.toFixed(2),

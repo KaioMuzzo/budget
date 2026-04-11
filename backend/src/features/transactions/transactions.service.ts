@@ -47,6 +47,7 @@ function validateType(type: unknown): TransactionType {
 }
 
 function validateSubType(sub_type: unknown): SubType {
+  // YIELD is only allowed via /investments/:id/yield, not through this endpoint
   if (sub_type !== 'DEPOSIT' && sub_type !== 'WITHDRAWAL') {
     throw new AppError(ErrorCode.SUB_TYPE_REQUIRED)
   }
@@ -107,14 +108,18 @@ async function checkSufficientBalance(boxId: number, amount: number, excludeTran
   const where = { box_id: boxId, type: 'INVESTMENT' as const }
   const excludeFilter = excludeTransactionId ? { NOT: { id: excludeTransactionId } } : {}
 
-  const [depositAgg, withdrawalAgg] = await Promise.all([
-    prisma.transaction.aggregate({ where: { ...where, ...excludeFilter, sub_type: 'DEPOSIT' }, _sum: { amount: true } }),
+  const [box, depositAgg, withdrawalAgg, yieldAgg] = await Promise.all([
+    prisma.investmentBox.findUnique({ where: { id: boxId }, select: { initial_balance: true } }),
+    prisma.transaction.aggregate({ where: { ...where, ...excludeFilter, sub_type: 'DEPOSIT' },    _sum: { amount: true } }),
     prisma.transaction.aggregate({ where: { ...where, ...excludeFilter, sub_type: 'WITHDRAWAL' }, _sum: { amount: true } }),
+    prisma.transaction.aggregate({ where: { ...where, ...excludeFilter, sub_type: 'YIELD' },      _sum: { amount: true } }),
   ])
 
-  const deposits = depositAgg._sum.amount ?? new Prisma.Decimal(0)
+  const initialBalance = box?.initial_balance ?? new Prisma.Decimal(0)
+  const deposits    = depositAgg._sum.amount    ?? new Prisma.Decimal(0)
   const withdrawals = withdrawalAgg._sum.amount ?? new Prisma.Decimal(0)
-  const balance = new Prisma.Decimal(deposits).sub(withdrawals)
+  const yields      = yieldAgg._sum.amount      ?? new Prisma.Decimal(0)
+  const balance = new Prisma.Decimal(initialBalance).add(deposits).sub(withdrawals).add(yields)
 
   if (new Prisma.Decimal(amount).gt(balance)) {
     throw new AppError(ErrorCode.INSUFFICIENT_BALANCE)

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express'
-import { listBoxes, createBox, updateBox, getBox, deleteBox, listBoxTransactions, deleteBoxTransaction } from './investments.service'
+import { listBoxes, createBox, updateBox, getBox, deleteBox, listBoxTransactions, deleteBoxTransaction, registerYield } from './investments.service'
 
 export async function getBoxes(req: Request, res: Response, next: NextFunction) {
   try {
@@ -19,7 +19,7 @@ export async function getBoxById(req: Request, res: Response, next: NextFunction
 
 export async function postBox(req: Request, res: Response, next: NextFunction) {
   try {
-    res.status(201).json(await createBox(req.body.name, req.body.goal))
+    res.status(201).json(await createBox(req.body.name, req.body.goal, req.body.initial_balance))
   } catch (err) {
     next(err)
   }
@@ -27,7 +27,15 @@ export async function postBox(req: Request, res: Response, next: NextFunction) {
 
 export async function patchBox(req: Request, res: Response, next: NextFunction) {
   try {
-    res.json(await updateBox(Number(req.params.id), req.body.name, req.body.goal))
+    res.json(await updateBox(Number(req.params.id), req.body.name, req.body.goal, req.body.initial_balance))
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function postYield(req: Request, res: Response, next: NextFunction) {
+  try {
+    res.status(201).json(await registerYield(Number(req.params.id), req.body.current_value, req.body.date))
   } catch (err) {
     next(err)
   }

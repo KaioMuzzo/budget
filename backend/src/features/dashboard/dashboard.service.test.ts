@@ -40,6 +40,12 @@ async function createDeposit(amount: number, date: string) {
   })
 }
 
+async function createYield(amount: number, date: string) {
+  return prisma.transaction.create({
+    data: { description: 'Rendimento', amount, type: 'INVESTMENT', sub_type: 'YIELD', date: d(date), box_id: boxId },
+  })
+}
+
 // ─── getSummary ───────────────────────────────────────────────────────────────
 
 describe('getSummary', () => {
@@ -64,6 +70,33 @@ describe('getSummary', () => {
     await createIncome(3000, '2026-03-15')
     await createIncome(5000, '2026-04-01')
 
+    const result = await getSummary(APR.month, APR.year)
+    expect(result.income).toBe('5000.00')
+  })
+
+  it('includes BudgetConfig.initial_balance in balance', async () => {
+    await prisma.budgetConfig.create({
+      data: {
+        salary: 5000,
+        initial_balance: 500,
+        pockets: { 'Liberdade Financeira': 10, 'Custos Fixos': 55, 'Conforto': 10, 'Metas': 10, 'Prazeres': 10, 'Conhecimento': 5 },
+      },
+    })
+    await createIncome(2000, '2026-04-01')
+    const result = await getSummary(APR.month, APR.year)
+    expect(result.balance).toBe('2500.00') // 500 + 2000 - 0 - 0
+  })
+
+  it('YIELD transactions do not enter investment metric', async () => {
+    await createDeposit(800, '2026-04-01')
+    await createYield(50, '2026-04-10')
+    const result = await getSummary(APR.month, APR.year)
+    expect(result.investment).toBe('800.00')
+  })
+
+  it('YIELD transactions do not enter income metric', async () => {
+    await createIncome(5000, '2026-04-01')
+    await createYield(100, '2026-04-10')
     const result = await getSummary(APR.month, APR.year)
     expect(result.income).toBe('5000.00')
   })

@@ -396,6 +396,31 @@ describe('updateTransaction', () => {
   })
 })
 
+// ─── checkSufficientBalance — initial_balance e YIELD ────────────────────────
+
+describe('checkSufficientBalance — initial_balance and YIELD', () => {
+  it('withdrawal permitido quando amount <= initial_balance (sem DEPOSIT)', async () => {
+    const box = await prisma.investmentBox.create({ data: { name: 'Box IB', initial_balance: 500 } })
+    const tx = await createTransaction('Resgate', 300, 'INVESTMENT', '2026-04-01', null, 'WITHDRAWAL', box.id)
+    expect(tx.amount).toBe('300.00')
+  })
+
+  it('withdrawal permitido com initial_balance + YIELD suficiente', async () => {
+    const box = await prisma.investmentBox.create({ data: { name: 'Box YIELD', initial_balance: 400 } })
+    await prisma.transaction.create({
+      data: { description: 'Rendimento', amount: 100, type: 'INVESTMENT', sub_type: 'YIELD', date: new Date('2026-04-01'), box_id: box.id },
+    })
+    const tx = await createTransaction('Resgate', 450, 'INVESTMENT', '2026-04-02', null, 'WITHDRAWAL', box.id)
+    expect(tx.amount).toBe('450.00')
+  })
+
+  it('YIELD não aceito como sub_type via endpoint de transactions genérico', async () => {
+    await expect(
+      createTransaction('Rendimento', 50, 'INVESTMENT', '2026-04-01', null, 'YIELD', boxId)
+    ).rejects.toMatchObject({ code: 'SUB_TYPE_REQUIRED' })
+  })
+})
+
 // ─── deleteTransaction ───────────────────────────────────────────────────────
 
 describe('deleteTransaction', () => {

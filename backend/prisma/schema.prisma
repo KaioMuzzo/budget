@@ -21,13 +21,15 @@ enum TransactionType {
 enum SubType {
   DEPOSIT
   WITHDRAWAL
+  YIELD
 }
 
 model BudgetConfig {
-  id         Int      @id @default(autoincrement())
-  salary     Decimal  @db.Decimal(10, 2)
-  pockets    Json
-  updated_at DateTime @updatedAt
+  id              Int      @id @default(autoincrement())
+  salary          Decimal  @db.Decimal(10, 2)
+  pockets         Json
+  initial_balance Decimal? @db.Decimal(10, 2)
+  updated_at      DateTime @updatedAt
 }
 
 model Category {
@@ -53,10 +55,11 @@ model Transaction {
 }
 
 model InvestmentBox {
-  id           Int           @id @default(autoincrement())
-  name         String
-  goal         Decimal?      @db.Decimal(10, 2)
-  created_at   DateTime      @default(now())
-  updated_at   DateTime      @updatedAt
-  transactions Transaction[]
+  id              Int           @id @default(autoincrement())
+  name            String
+  goal            Decimal?      @db.Decimal(10, 2)
+  initial_balance Decimal?      @db.Decimal(10, 2)
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
+  transactions    Transaction[]
 }

@@ -16,6 +16,9 @@ const fmtDate = iso => new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'UT
 // MONTH NAV
 function updateMonthLabel() {
   document.getElementById('monthLabel').textContent = `${MONTHS[month-1]} ${year}`
+  document.getElementById('heroSub').textContent = 'carregando...'
+  document.getElementById('heroAmount').textContent = '—'
+  document.getElementById('heroCents').textContent = ''
 }
 
 document.getElementById('btnPrev').addEventListener('click', () => {
@@ -251,6 +254,18 @@ async function loadTransactions() {
   document.getElementById('sumExpense').textContent = fmt(summary.expense)
   document.getElementById('sumInvest').textContent  = fmt(summary.investment || 0)
   document.getElementById('sumBalance').textContent = fmt(summary.balance)
+
+  // Hero balance
+  const balance = parseFloat(summary.balance)
+  const balanceAbs = Math.abs(balance)
+  const [intPart, decPart] = balanceAbs.toFixed(2).split('.')
+  const intFmt = parseFloat(intPart).toLocaleString('pt-BR')
+  const heroAmountEl = document.getElementById('heroAmount')
+  heroAmountEl.textContent = intFmt
+  heroAmountEl.className = 'hero-amount' + (balance < 0 ? ' negative' : balance > 0 ? ' positive' : '')
+  document.getElementById('heroCents').textContent = `,${decPart}`
+  document.getElementById('heroSub').innerHTML =
+    `<strong>${transactions.length}</strong> lançamento${transactions.length !== 1 ? 's' : ''} · receitas <strong>${fmt(summary.income)}</strong> · despesas <strong>${fmt(summary.expense)}</strong>`
 
   const tbody = document.getElementById('tbody')
 

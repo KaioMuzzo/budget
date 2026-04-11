@@ -681,6 +681,11 @@
       <label>Nome</label>
       <input type="text" id="fName" placeholder="Ex: Tesouro Direto, CDB..." />
     </div>
+    <div class="field">
+      <label>Saldo inicial <span style="opacity:.4;font-size:.65rem;text-transform:none;letter-spacing:0">(opcional)</span></label>
+      <input type="number" id="fInitialBalance" placeholder="0,00" min="0" step="0.01" />
+      <span style="font-size:.68rem;color:var(--muted);margin-top:.15rem">Use para registrar o valor já existente antes de começar a usar o app</span>
+    </div>
   </div>
   <div class="panel-footer">
     <button class="btn-submit" id="btnSubmitBox">Criar</button>
@@ -708,6 +713,32 @@
   </div>
   <div class="panel-footer">
     <button class="btn-submit" id="btnSubmitTx">Confirmar</button>
+  </div>
+</div>
+
+<!-- PAINEL: RENDIMENTO -->
+<div class="side-panel" id="panelYield">
+  <div class="panel-header">
+    <span class="panel-title" id="panelYieldTitle">Atualizar valor</span>
+    <button class="btn-close" id="closeYield">✕</button>
+  </div>
+  <div class="panel-body">
+    <div style="display:flex;flex-direction:column;gap:.25rem;padding:.75rem 1rem;background:var(--bg);border:1px solid var(--border);border-radius:8px">
+      <span style="font-size:.65rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Saldo atual da caixinha</span>
+      <span id="yieldCurrentBalance" style="font-family:var(--font-mono);font-size:1.1rem;font-weight:600;color:var(--text)">—</span>
+    </div>
+    <div class="field">
+      <label>Valor atual da carteira (R$)</label>
+      <input type="number" id="fYieldValue" placeholder="0,00" min="0" step="0.01" />
+    </div>
+    <div class="field">
+      <label>Data</label>
+      <input type="date" id="fYieldDate" />
+    </div>
+    <span id="yieldWarning" style="display:none;font-size:.75rem;color:var(--muted);padding:.5rem .75rem;background:rgba(255,255,255,0.04);border-radius:6px;border:1px solid var(--border)">⚠ Valor igual ao saldo atual — nada a registrar</span>
+  </div>
+  <div class="panel-footer">
+    <button class="btn-submit" id="btnSubmitYield">Confirmar</button>
   </div>
 </div>
 
@@ -798,7 +829,8 @@
     const zeradas = boxes.filter(b => parseFloat(b.balance) === 0).length
     document.getElementById('statAtivaSub').textContent = zeradas === 0 ? 'nenhuma zerada' : `${zeradas} zerada(s)`
     if (last_movement) {
-      const label = last_movement.sub_type === 'DEPOSIT' ? 'Aporte' : 'Retirada'
+      const subTypeLabels = { DEPOSIT: 'Aporte', WITHDRAWAL: 'Retirada', YIELD: 'Rendimento' }
+      const label = subTypeLabels[last_movement.sub_type] ?? last_movement.sub_type
       document.getElementById('statUltima').textContent = fmtDate(last_movement.date)
       document.getElementById('statUltimaSub').textContent = `${label} · ${last_movement.box_name} · R$ ${fmtBRL(last_movement.amount)}`
     } else {
@@ -847,6 +879,8 @@
                   data-id="${box.id}" data-name="${box.name}" data-action="DEPOSIT">+ Aportar</button>
           <button class="btn-action"
                   data-id="${box.id}" data-name="${box.name}" data-action="WITHDRAWAL">− Retirar</button>
+          <button class="btn-action"
+                  data-id="${box.id}" data-name="${box.name}" data-balance="${box.balance}" data-action="YIELD">↻ Atualizar</button>
         </div>
       </div>`
     }).join('')
@@ -889,7 +923,11 @@
     document.querySelectorAll('#pocketsGrid [data-action]').forEach(btn => {
       btn.addEventListener('click', e => {
         e.stopPropagation()
-        openTxPanel(btn.dataset.id, btn.dataset.name, btn.dataset.action)
+        if (btn.dataset.action === 'YIELD') {
+          openYieldPanel(btn.dataset.id, btn.dataset.name, btn.dataset.balance)
+        } else {
+          openTxPanel(btn.dataset.id, btn.dataset.name, btn.dataset.action)
+        }
       })
     })
 
@@ -917,18 +955,21 @@
   }
 
   // ── NOVA CAIXINHA ──────────────────────────────────────────────
-  const overlay  = document.getElementById('overlay')
-  const panelBox = document.getElementById('panelBox')
-  const panelTx  = document.getElementById('panelTx')
+  const overlay    = document.getElementById('overlay')
+  const panelBox   = document.getElementById('panelBox')
+  const panelTx    = document.getElementById('panelTx')
+  const panelYield = document.getElementById('panelYield')
 
   function closeAll() {
     panelBox.classList.remove('open')
     panelTx.classList.remove('open')
+    panelYield.classList.remove('open')
     overlay.classList.remove('open')
   }
 
   document.getElementById('btnNew').addEventListener('click', () => {
-    document.getElementById('fName').value = ''
+    document.getElementById('fName').value            = ''
+    document.getElementById('fInitialBalance').value  = ''
     panelBox.classList.add('open')
     overlay.classList.add('open')
   })
@@ -938,11 +979,13 @@
   document.getElementById('btnSubmitBox').addEventListener('click', async () => {
     const name = document.getElementById('fName').value.trim()
     if (!name) return
+    const ibVal = parseFloat(document.getElementById('fInitialBalance').value)
+    const body = { name, initial_balance: isNaN(ibVal) ? null : ibVal }
     try {
       const res = await fetch(`${API}/investments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name })
+        body: JSON.stringify(body)
       })
       if (!res.ok) throw new Error()
       closeAll()
@@ -989,6 +1032,88 @@
       alert('Erro ao registrar movimentação.')
     }
   })
+
+  // ── RENDIMENTO ────────────────────────────────────────────────
+  let currentYieldBoxId      = null
+  let currentYieldBoxBalance = 0
+
+  function openYieldPanel(boxId, boxName, balance) {
+    currentYieldBoxId      = Number(boxId)
+    currentYieldBoxBalance = parseFloat(balance)
+    document.getElementById('panelYieldTitle').textContent  = `Atualizar · ${boxName}`
+    document.getElementById('yieldCurrentBalance').textContent = `R$ ${fmtBRL(balance)}`
+    document.getElementById('fYieldValue').value = ''
+    document.getElementById('fYieldDate').value  = new Date().toISOString().slice(0, 10)
+    document.getElementById('yieldWarning').style.display = 'none'
+    document.getElementById('btnSubmitYield').disabled = false
+    panelYield.classList.add('open')
+    overlay.classList.add('open')
+  }
+
+  document.getElementById('fYieldValue').addEventListener('input', e => {
+    const val     = parseFloat(e.target.value)
+    const warning = document.getElementById('yieldWarning')
+    const btn     = document.getElementById('btnSubmitYield')
+    const equal   = !isNaN(val) && val === currentYieldBoxBalance
+    warning.style.display = equal ? '' : 'none'
+    btn.disabled          = equal || isNaN(val) || val < 0
+  })
+
+  document.getElementById('closeYield').addEventListener('click', closeAll)
+
+  document.getElementById('btnSubmitYield').addEventListener('click', async () => {
+    const current_value = parseFloat(document.getElementById('fYieldValue').value)
+    const date          = document.getElementById('fYieldDate').value
+    if (isNaN(current_value) || current_value < 0 || !date) return
+
+    try {
+      const res = await fetch(`${API}/investments/${currentYieldBoxId}/yield`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_value, date }),
+      })
+
+      if (!res.ok) {
+        const d = await res.json()
+        if (d.error === 'TRANSACTION_AMOUNT_INVALID') alert('Valor igual ao saldo atual — nada a registrar.')
+        else if (d.error === 'TRANSACTION_DATE_INVALID') alert('Data inválida.')
+        else alert('Erro ao registrar rendimento.')
+        return
+      }
+
+      const { yield_amount, new_balance } = await res.json()
+      closeAll()
+      await load()
+
+      const isPositive = parseFloat(yield_amount) >= 0
+      const sign       = isPositive ? '+' : ''
+      showToast(`Rendimento de R$ ${sign}${fmtBRL(yield_amount)} registrado`)
+    } catch {
+      alert('Erro ao registrar rendimento.')
+    }
+  })
+
+  // ── TOAST ─────────────────────────────────────────────────────
+  function showToast(msg) {
+    let toast = document.getElementById('yieldToast')
+    if (!toast) {
+      toast = document.createElement('div')
+      toast.id = 'yieldToast'
+      toast.style.cssText = `
+        position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);
+        font-family:var(--font-mono);font-size:.78rem;
+        background:var(--surface);border:1px solid var(--border);
+        color:var(--text);padding:.65rem 1.25rem;border-radius:8px;
+        box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:100;
+        opacity:0;transition:opacity .3s;white-space:nowrap;
+      `
+      document.body.appendChild(toast)
+    }
+    toast.textContent = msg
+    toast.style.opacity = '1'
+    clearTimeout(toast._t)
+    toast._t = setTimeout(() => { toast.style.opacity = '0' }, 3000)
+  }
 
   overlay.addEventListener('click', closeAll)
 

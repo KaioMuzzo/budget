@@ -21,49 +21,71 @@ function fmt(val) {
 
 function updateMonthLabel() {
   document.getElementById('monthLabel').textContent = `${MONTHS[month - 1]} ${year}`
+  document.getElementById('heroSub').textContent = 'carregando...'
+  document.getElementById('heroAmount').textContent = '—'
+  document.getElementById('heroCents').textContent = ''
 }
 
 document.getElementById('btnPrev').addEventListener('click', () => {
-  month--
-  if (month < 1) { month = 12; year-- }
+  if (--month < 1) { month = 12; year-- }
   updateMonthLabel()
   loadDashboard()
 })
 
 document.getElementById('btnNext').addEventListener('click', () => {
-  month++
-  if (month > 12) { month = 1; year++ }
+  if (++month > 12) { month = 1; year++ }
   updateMonthLabel()
   loadDashboard()
 })
 
-function renderCards(summary, comparison) {
-  const cards = [
-    { id: 'cardIncome',     key: 'income',     label: 'receita' },
-    { id: 'cardExpense',    key: 'expense',     label: 'despesas' },
-    { id: 'cardInvest',     key: 'investment',  label: 'investido' },
+function renderHero(summary, txCount) {
+  const balance = parseFloat(summary.balance)
+  const abs     = Math.abs(balance)
+  const [intPart, decPart] = abs.toFixed(2).split('.')
+  document.getElementById('heroAmount').textContent = parseFloat(intPart).toLocaleString('pt-BR')
+  document.getElementById('heroCents').textContent  = `,${decPart}`
+  document.getElementById('heroSub').innerHTML =
+    `<strong>${txCount}</strong> lançamento${txCount !== 1 ? 's' : ''} · receitas <strong>${fmt(summary.income)}</strong> · despesas <strong>${fmt(summary.expense)}</strong>`
+}
+
+function renderStats(summary, comparison) {
+  const items = [
+    { id: 'cardIncome',  key: 'income',     subId: 'cardIncomeSub'  },
+    { id: 'cardExpense', key: 'expense',     subId: 'cardExpenseSub' },
+    { id: 'cardInvest',  key: 'investment',  subId: 'cardInvestSub'  },
   ]
 
-  cards.forEach(({ id, key }) => {
+  items.forEach(({ id, key, subId }) => {
     document.getElementById(id).textContent = fmt(summary[key])
-
-    const subEl = document.getElementById(id + 'Sub')
+    const subEl = document.getElementById(subId)
     const pct   = comparison[key]
 
-    if (pct === undefined || pct === null) {
+    if (pct == null) {
       subEl.textContent = '—'
-      subEl.className   = 'card-sub'
+      subEl.className   = 'stat-sub'
     } else {
       const sign = pct >= 0 ? '↑' : '↓'
       subEl.textContent = `${sign} ${Math.abs(pct)}% vs mês anterior`
-      subEl.className   = key === 'expense'
-        ? (pct > 0 ? 'card-sub down' : 'card-sub up')
-        : (pct > 0 ? 'card-sub up'   : 'card-sub down')
+      subEl.className = key === 'expense'
+        ? `stat-sub ${pct > 0 ? 'down' : 'up'}`
+        : `stat-sub ${pct > 0 ? 'up' : 'down'}`
     }
   })
 
   document.getElementById('cardBalance').textContent    = fmt(summary.balance)
   document.getElementById('cardBalanceSub').textContent = 'disponível no mês'
+}
+
+// ── BAR CHART ─────────────────────────────────────────────────
+function makeGradient(ctx, colorHex, alpha1 = 0.55, alpha2 = 0.15) {
+  const gr = ctx.createLinearGradient(0, 0, 0, ctx.canvas.offsetHeight || 200)
+  gr.addColorStop(0, colorHex + hex(alpha1))
+  gr.addColorStop(1, colorHex + hex(alpha2))
+  return gr
+}
+
+function hex(alpha) {
+  return Math.round(alpha * 255).toString(16).padStart(2, '0')
 }
 
 function renderBarChart(history) {
@@ -72,36 +94,86 @@ function renderBarChart(history) {
   const expense = history.map(h => parseFloat(h.expense))
   const invest  = history.map(h => parseFloat(h.investment))
 
+  const incomeColor  = css('--income').trim()
+  const expenseColor = css('--expense').trim()
+  const investColor  = '#fbbf24'
+  const borderColor  = css('--border').trim()
+  const mutedColor   = css('--muted').trim()
+
   if (barChart) {
-    barChart.data.labels          = labels
+    barChart.data.labels = labels
     barChart.data.datasets[0].data = income
     barChart.data.datasets[1].data = expense
     barChart.data.datasets[2].data = invest
-    barChart.update()
+    barChart.update({ duration: 600, easing: 'easeInOutQuart' })
     return
   }
 
-  barChart = new Chart(document.getElementById('barChart'), {
+  const canvasEl = document.getElementById('barChart')
+  const ctx      = canvasEl.getContext('2d')
+
+  barChart = new Chart(ctx, {
     type: 'bar',
     data: {
       labels,
       datasets: [
-        { label: 'Receita',   data: income,  backgroundColor: css('--income')  + '99', borderRadius: 5 },
-        { label: 'Despesa',   data: expense, backgroundColor: css('--expense') + '99', borderRadius: 5 },
-        { label: 'Investido', data: invest,  backgroundColor: css('--p6')      + '99', borderRadius: 5 },
+        {
+          label: 'Receita',
+          data: income,
+          backgroundColor: incomeColor + 'aa',
+          hoverBackgroundColor: incomeColor,
+          borderRadius: 5,
+          borderSkipped: false,
+        },
+        {
+          label: 'Despesa',
+          data: expense,
+          backgroundColor: expenseColor + 'aa',
+          hoverBackgroundColor: expenseColor,
+          borderRadius: 5,
+          borderSkipped: false,
+        },
+        {
+          label: 'Investido',
+          data: invest,
+          backgroundColor: investColor + 'aa',
+          hoverBackgroundColor: investColor,
+          borderRadius: 5,
+          borderSkipped: false,
+        },
       ]
     },
     options: {
       responsive: true,
-      plugins: { legend: { display: false } },
+      animation: { duration: 700, easing: 'easeInOutQuart' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1a1f',
+          borderColor: borderColor,
+          borderWidth: 1,
+          titleColor: '#ffffff',
+          bodyColor: mutedColor,
+          padding: 10,
+          cornerRadius: 8,
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.parsed.y)}`
+          }
+        }
+      },
       scales: {
-        x: { grid: { color: css('--border') }, ticks: { color: css('--muted'), font: { size: 11, family: 'DM Sans' } } },
+        x: {
+          grid: { display: false },
+          border: { display: false },
+          ticks: { color: mutedColor, font: { size: 11, family: 'DM Sans' } }
+        },
         y: {
-          grid: { color: css('--border') },
+          grid: { color: borderColor + '66', drawBorder: false },
+          border: { display: false },
           ticks: {
-            color: css('--muted'),
+            color: mutedColor,
             font: { size: 11, family: 'DM Sans' },
-            callback: v => 'R$ ' + (v / 1000).toFixed(0) + 'k'
+            callback: v => 'R$ ' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v)
           }
         }
       }
@@ -109,17 +181,21 @@ function renderBarChart(history) {
   })
 }
 
+// ── DONUT CHART ────────────────────────────────────────────────
 function renderDonut(byCategory) {
   const palette = PALETTE.map(v => css(v))
   const total   = byCategory.reduce((s, c) => s + parseFloat(c.amount), 0)
   const labels  = byCategory.map(c => c.name)
   const data    = byCategory.map(c => parseFloat(c.amount))
+  const colors  = palette.slice(0, byCategory.length)
+  const borderColor = css('--surface').trim()
+  const mutedColor  = css('--muted').trim()
 
   if (donutChart) {
-    donutChart.data.labels            = labels
-    donutChart.data.datasets[0].data  = data
-    donutChart.data.datasets[0].backgroundColor = palette.slice(0, byCategory.length)
-    donutChart.update()
+    donutChart.data.labels = labels
+    donutChart.data.datasets[0].data = data
+    donutChart.data.datasets[0].backgroundColor = colors
+    donutChart.update({ duration: 600, easing: 'easeInOutQuart' })
   } else {
     donutChart = new Chart(document.getElementById('donutChart'), {
       type: 'doughnut',
@@ -127,19 +203,28 @@ function renderDonut(byCategory) {
         labels,
         datasets: [{
           data,
-          backgroundColor: palette.slice(0, byCategory.length),
-          borderColor: css('--surface'),
+          backgroundColor: colors,
+          borderColor,
           borderWidth: 3,
-          hoverOffset: 6
+          hoverOffset: 8,
+          hoverBorderWidth: 3,
         }]
       },
       options: {
-        cutout: '68%',
+        cutout: '70%',
+        animation: { animateRotate: true, animateScale: false, duration: 700, easing: 'easeInOutQuart' },
         plugins: {
           legend: { display: false },
           tooltip: {
+            backgroundColor: '#1a1a1f',
+            borderColor: css('--border').trim(),
+            borderWidth: 1,
+            titleColor: '#ffffff',
+            bodyColor: mutedColor,
+            padding: 10,
+            cornerRadius: 8,
             callbacks: {
-              label: ctx => ` R$ ${ctx.parsed.toLocaleString('pt-BR')} (${Math.round(ctx.parsed / total * 100)}%)`
+              label: ctx => ` ${fmt(ctx.parsed)} (${Math.round(ctx.parsed / total * 100)}%)`
             }
           }
         }
@@ -153,7 +238,7 @@ function renderDonut(byCategory) {
     const color = palette[i]
     return `
       <div class="donut-legend-item">
-        <span class="pocket-dot" style="background:${color}"></span>
+        <span class="legend-pip" style="background:${color}"></span>
         <span class="donut-legend-name">${cat.name}</span>
         <div class="donut-legend-bar-wrap">
           <div class="donut-legend-bar" style="width:${pct}%;background:${color}"></div>
@@ -164,12 +249,13 @@ function renderDonut(byCategory) {
   }).join('')
 }
 
+// ── POCKETS ────────────────────────────────────────────────────
 function renderPockets(pockets) {
   const grid = document.getElementById('pocketsGrid')
 
   if (!pockets) {
     grid.innerHTML = `<div style="padding:1rem;font-size:0.82rem;color:var(--muted)">
-      Nenhuma configuração encontrada. <a href="config.html" style="color:var(--accent)">Configurar →</a>
+      Nenhuma configuração. <a href="config.html" style="color:var(--accent)">Configurar →</a>
     </div>`
     return
   }
@@ -188,6 +274,7 @@ function renderPockets(pockets) {
   `).join('')
 }
 
+// ── TRANSACTIONS ───────────────────────────────────────────────
 function renderTransactions(transactions) {
   const body = document.getElementById('txBody')
 
@@ -213,13 +300,15 @@ function renderTransactions(transactions) {
   }).join('')
 }
 
+// ── LOAD ───────────────────────────────────────────────────────
 async function loadDashboard() {
   const res = await fetch(`${API}/dashboard?month=${month}&year=${year}`)
   if (!res.ok) return
 
   const { summary, comparison, history, byCategory, recentTransactions, pockets } = await res.json()
 
-  renderCards(summary, comparison)
+  renderHero(summary, recentTransactions.length)
+  renderStats(summary, comparison)
   renderBarChart(history)
   renderDonut(byCategory)
   renderPockets(pockets)

@@ -14,6 +14,7 @@ const DEFAULT_PCTS = [25, 30, 15, 15, 10, 5]
 
 let pcts = [...DEFAULT_PCTS]
 let salary = 0
+let initialBalance = null
 let donutChart = null
 
 // --- BUILD SLIDER CARDS ---
@@ -136,10 +137,17 @@ document.getElementById('salary').addEventListener('input', e => {
   update()
 })
 
+document.getElementById('initialBalance').addEventListener('input', e => {
+  const v = parseFloat(e.target.value)
+  initialBalance = isNaN(v) ? null : v
+})
+
 document.getElementById('btnReset').addEventListener('click', () => {
-  pcts   = [...DEFAULT_PCTS]
-  salary = 0
-  document.getElementById('salary').value = ''
+  pcts           = [...DEFAULT_PCTS]
+  salary         = 0
+  initialBalance = null
+  document.getElementById('salary').value         = ''
+  document.getElementById('initialBalance').value = ''
   update()
 })
 
@@ -154,7 +162,8 @@ document.getElementById('btnSave').addEventListener('click', async () => {
 
   const body = {
     salary,
-    pockets: Object.fromEntries(POCKETS.map((p,i) => [p.name, pcts[i]]))
+    pockets: Object.fromEntries(POCKETS.map((p,i) => [p.name, pcts[i]])),
+    initial_balance: initialBalance,
   }
 
   try {
@@ -183,6 +192,11 @@ async function loadConfig() {
 
     salary = parseFloat(data.salary)
     document.getElementById('salary').value = salary
+
+    if (data.initial_balance !== null && data.initial_balance !== undefined) {
+      initialBalance = parseFloat(data.initial_balance)
+      document.getElementById('initialBalance').value = initialBalance
+    }
 
     POCKETS.forEach((p, i) => {
       pcts[i] = data.pockets[p.name].percent

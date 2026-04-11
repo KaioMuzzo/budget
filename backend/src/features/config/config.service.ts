@@ -18,6 +18,7 @@ export type PocketsOutput = Record<string, { percent: number; amount: string }>
 export type ConfigResponse = {
   salary: string
   pockets: PocketsOutput
+  initial_balance: string | null
   updated_at: Date
 }
 
@@ -68,11 +69,12 @@ export async function fetchConfig(): Promise<ConfigResponse> {
   return {
     salary: config.salary.toFixed(2),
     pockets: computePockets(config.salary, config.pockets as PocketsInput),
+    initial_balance: config.initial_balance?.toFixed(2) ?? null,
     updated_at: config.updated_at,
   }
 }
 
-export async function saveConfig(salary: unknown, pockets: unknown): Promise<ConfigResponse> {
+export async function saveConfig(salary: unknown, pockets: unknown, initial_balance?: unknown): Promise<ConfigResponse> {
   if (typeof salary !== 'number' || salary <= 0) {
     throw new AppError(ErrorCode.INVALID_SALARY)
   }
@@ -80,20 +82,29 @@ export async function saveConfig(salary: unknown, pockets: unknown): Promise<Con
   const validatedPockets = validatePockets(pockets)
   const salaryDecimal = new Prisma.Decimal(salary)
 
+  let validatedInitialBalance: Prisma.Decimal | null = null
+  if (initial_balance !== undefined && initial_balance !== null) {
+    const n = Number(initial_balance)
+    if (isNaN(n) || n < 0) throw new AppError(ErrorCode.TRANSACTION_AMOUNT_INVALID)
+    validatedInitialBalance = new Prisma.Decimal(n)
+  }
+
   const existing = await prisma.budgetConfig.findFirst()
 
+  const data = {
+    salary: salaryDecimal,
+    pockets: validatedPockets,
+    ...(initial_balance !== undefined ? { initial_balance: validatedInitialBalance } : {}),
+  }
+
   const config = existing
-    ? await prisma.budgetConfig.update({
-        where: { id: existing.id },
-        data: { salary: salaryDecimal, pockets: validatedPockets },
-      })
-    : await prisma.budgetConfig.create({
-        data: { salary: salaryDecimal, pockets: validatedPockets },
-      })
+    ? await prisma.budgetConfig.update({ where: { id: existing.id }, data })
+    : await prisma.budgetConfig.create({ data })
 
   return {
     salary: config.salary.toFixed(2),
     pockets: computePockets(config.salary, validatedPockets),
+    initial_balance: config.initial_balance?.toFixed(2) ?? null,
     updated_at: config.updated_at,
   }
 }

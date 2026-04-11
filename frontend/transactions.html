@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Budget — Lançamentos</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <style>
     body { overflow-x: hidden; }
@@ -14,101 +14,263 @@
       display: flex;
       flex-direction: column;
       flex: 1;
-      padding: 2.5rem;
-      gap: 1.5rem;
+      padding: 0;
     }
 
-    .toolbar {
+    /* ── HERO ─────────────────────────────────────────────── */
+    .hero {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      justify-content: space-between;
+      padding: 3rem 3rem 2.5rem;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+      background: var(--surface);
     }
 
-    .month-nav {
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 52px 52px;
+      opacity: 0.25;
+      pointer-events: none;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 55%;
+      background: radial-gradient(ellipse at 80% 50%, rgba(168,255,62,0.06) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    .hero-left {
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+      position: relative;
+      z-index: 1;
+      animation: fadeIn 0.6s ease both;
+    }
+
+    .hero-eyebrow {
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      margin-right: auto;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
     }
 
-    .month-label {
-      font-size: 1.3rem;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      min-width: 180px;
+    .hero-eyebrow::before {
+      content: '';
+      width: 24px;
+      height: 1px;
+      background: var(--muted);
+    }
+
+    .hero-month-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
     }
 
     .btn-arrow {
-      background: var(--surface);
+      background: rgba(255,255,255,0.04);
       border: 1px solid var(--border);
       border-radius: 6px;
-      color: var(--text);
-      width: 34px;
-      height: 34px;
+      color: var(--muted);
+      width: 32px;
+      height: 32px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      font-size: 1rem;
+      font-size: 0.9rem;
       transition: border-color 0.2s, color 0.2s;
+      flex-shrink: 0;
     }
 
     .btn-arrow:hover { border-color: var(--accent); color: var(--accent); }
 
-    .btn-new {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-family: var(--font-display);
-      font-size: 0.82rem;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      background: var(--accent);
-      color: #0d0d0f;
-      border: none;
-      border-radius: 6px;
-      padding: 0.65rem 1.25rem;
-      cursor: pointer;
-      transition: opacity 0.2s, transform 0.15s;
+    .hero-month {
+      font-size: 2.6rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--text);
+      line-height: 1;
+      min-width: 280px;
     }
 
-    .btn-new:hover { opacity: 0.85; transform: translateY(-1px); }
+    .hero-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
 
-    .btn-categories {
+    .hero-sub strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ── HERO RIGHT (saldo) ───────────────────────────────── */
+    .hero-right {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.6rem;
+      animation: fadeIn 0.6s 0.1s ease both;
+    }
+
+    .hero-balance-lbl {
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .hero-balance {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      display: flex;
+      align-items: baseline;
+      gap: 0.15em;
+    }
+
+    .hero-currency { font-size: 1.4rem; color: var(--muted); font-weight: 400; letter-spacing: 0; }
+    .hero-amount   { font-size: 3.6rem; color: var(--text); }
+    .hero-cents    { font-size: 1.8rem; color: var(--muted); font-weight: 400; }
+    .hero-amount.positive { color: var(--text); }
+    .hero-amount.negative { color: var(--text); }
+
+    /* ── STATS BAR ────────────────────────────────────────── */
+    .stats-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat-block {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      padding: 1.4rem 2rem;
+      border-right: 1px solid var(--border);
+      animation: fadeIn 0.5s ease both;
+    }
+
+    .stat-block:nth-child(1) { animation-delay: 0.08s; }
+    .stat-block:nth-child(2) { animation-delay: 0.13s; }
+    .stat-block:nth-child(3) { animation-delay: 0.18s; }
+    .stat-block:nth-child(4) { animation-delay: 0.23s; }
+    .stat-block:last-child { border-right: none; }
+
+    .stat-lbl {
+      font-size: 0.67rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .stat-val {
+      font-family: var(--font-mono);
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .stat-val.income  { color: var(--income); }
+    .stat-val.expense { color: var(--expense); }
+    .stat-val.invest  { color: #fbbf24; }
+    .stat-val.balance { color: var(--accent); }
+
+    .stat-sub { font-size: 0.7rem; color: var(--muted); }
+
+    /* ── TABLE SECTION ────────────────────────────────────── */
+    .table-section {
+      display: flex;
+      flex-direction: column;
+      padding: 1.75rem 2.5rem 2.5rem;
+      gap: 1rem;
+      animation: fadeIn 0.5s 0.28s ease both;
+    }
+
+    .table-toolbar {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      font-family: var(--font-display);
-      font-size: 0.82rem;
-      font-weight: 700;
-      letter-spacing: 0.05em;
+      justify-content: space-between;
+    }
+
+    .section-title {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
-      background: none;
+      color: var(--muted);
+    }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn-categories {
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      background: transparent;
       color: var(--muted);
       border: 1px solid var(--border);
       border-radius: 6px;
-      padding: 0.65rem 1.25rem;
+      padding: 0.48rem 1rem;
       cursor: pointer;
       transition: border-color 0.2s, color 0.2s;
     }
 
-    .btn-categories:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-categories:hover { border-color: var(--muted); color: var(--text); }
 
-    .summary-bar {
+    .btn-new {
       display: flex;
-      gap: 1.5rem;
-      font-family: var(--font-mono);
-      font-size: 0.82rem;
+      align-items: center;
+      gap: 0.45rem;
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid rgba(168,255,62,0.3);
+      border-radius: 6px;
+      padding: 0.48rem 1rem;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
     }
 
-    .summary-item { display: flex; align-items: center; gap: 0.5rem; }
-    .summary-item .lbl          { color: var(--muted); }
-    .summary-item .val-income   { color: var(--income);  font-weight: 600; }
-    .summary-item .val-expense  { color: var(--expense); font-weight: 600; }
-    .summary-item .val-invest   { color: #fbbf24;        font-weight: 600; }
-    .summary-item .val-balance  { color: var(--accent);  font-weight: 600; }
+    .btn-new:hover {
+      background: rgba(168,255,62,0.07);
+      border-color: rgba(168,255,62,0.55);
+    }
 
+    /* ── TABLE ────────────────────────────────────────────── */
     .table-wrap {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -119,7 +281,7 @@
     table { width: 100%; border-collapse: collapse; }
 
     thead th {
-      font-size: 0.7rem;
+      font-size: 0.67rem;
       font-weight: 600;
       letter-spacing: 0.1em;
       text-transform: uppercase;
@@ -137,40 +299,44 @@
 
     tbody tr:last-child { border-bottom: none; }
     tbody tr:hover { background: var(--surface2); }
-    tbody td { padding: 0.9rem 1.25rem; font-size: 0.88rem; }
+    tbody td { padding: 0.9rem 1.25rem; font-size: 0.86rem; }
 
     .td-desc { font-weight: 600; }
 
     .td-amount { font-family: var(--font-mono); font-weight: 600; font-size: 0.88rem; }
-    .td-amount.income   { color: var(--income);  }
-    .td-amount.expense  { color: var(--expense); }
-    .td-amount.invest   { color: #fbbf24;        }
+    .td-amount.income  { color: var(--income);  }
+    .td-amount.expense { color: var(--expense); }
+    .td-amount.invest  { color: #fbbf24; }
 
     .td-cat {
       display: inline-flex;
       align-items: center;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 600;
-      color: var(--muted);
-      background: var(--bg);
-      border: 1px solid var(--border);
       border-radius: 20px;
       padding: 0.2rem 0.65rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--muted);
     }
 
-    .td-date { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
+    .td-cat.invest { color: #fbbf24; border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.06); }
+
+    .td-date { font-family: var(--font-mono); font-size: 0.76rem; color: var(--muted); }
 
     .btn-delete {
       background: none;
       border: none;
       color: var(--muted);
       cursor: pointer;
-      font-size: 1rem;
-      padding: 0.25rem 0.5rem;
+      font-size: 0.82rem;
+      padding: 0.25rem 0.4rem;
       border-radius: 4px;
       transition: color 0.2s, background 0.2s;
+      opacity: 0;
     }
 
+    tbody tr:hover .btn-delete { opacity: 1; }
     .btn-delete:hover { color: var(--danger); background: rgba(255,78,78,0.08); }
 
     .empty-state {
@@ -182,7 +348,10 @@
       font-size: 0.88rem;
     }
 
-    /* OVERLAY */
+    td:last-child { text-align: right; white-space: nowrap; }
+    th:last-child { text-align: right; }
+
+    /* ── OVERLAY + PANELS ─────────────────────────────────── */
     .overlay {
       position: fixed;
       inset: 0;
@@ -195,11 +364,9 @@
 
     .overlay.open { opacity: 1; pointer-events: all; }
 
-    /* SIDE PANEL */
     .side-panel {
       position: fixed;
-      top: 0;
-      right: 0;
+      top: 0; right: 0;
       width: 380px;
       height: 100vh;
       background: var(--surface);
@@ -229,11 +396,8 @@
       border: 1px solid var(--border);
       border-radius: 6px;
       color: var(--muted);
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
       cursor: pointer;
       font-size: 1rem;
       transition: color 0.2s, border-color 0.2s;
@@ -259,9 +423,9 @@
     .field { display: flex; flex-direction: column; gap: 0.5rem; }
 
     .field label {
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       font-weight: 600;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.09em;
       text-transform: uppercase;
       color: var(--muted);
     }
@@ -309,9 +473,7 @@
 
     .type-btn.active-income   { background: rgba(56,189,248,0.15);  color: var(--income);  }
     .type-btn.active-expense  { background: rgba(244,114,182,0.15); color: var(--expense); }
-    .type-btn.active-invest   { background: rgba(251,191,36,0.15);  color: #fbbf24;        }
-
-    .td-cat.invest { color: #fbbf24; border-color: rgba(251,191,36,0.3); }
+    .type-btn.active-invest   { background: rgba(251,191,36,0.15);  color: #fbbf24; }
 
     .sub-toggle {
       display: flex;
@@ -343,7 +505,7 @@
       font-family: var(--font-display);
       font-size: 0.85rem;
       font-weight: 700;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
       background: var(--accent);
       color: #0d0d0f;
@@ -366,8 +528,8 @@
     .field-error.visible { display: block; }
 
     /* CAT LIST */
-    .section-label {
-      font-size: 0.7rem;
+    .panel-section-lbl {
+      font-size: 0.67rem;
       font-weight: 600;
       letter-spacing: 0.1em;
       text-transform: uppercase;
@@ -429,49 +591,79 @@
 </nav>
 
 <main>
-  <div class="toolbar">
-    <div class="month-nav">
-      <button class="btn-arrow" id="btnPrev">&#8592;</button>
-      <span class="month-label" id="monthLabel">—</span>
-      <button class="btn-arrow" id="btnNext">&#8594;</button>
-    </div>
-    <button class="btn-categories" id="btnCategories">Categorias</button>
-    <button class="btn-new" id="btnNew">+ Novo Lançamento</button>
-  </div>
 
-  <div class="summary-bar">
-    <div class="summary-item">
-      <span class="lbl">Receitas</span>
-      <span class="val-income" id="sumIncome">—</span>
+  <!-- ── HERO ─────────────────────────────────────────────── -->
+  <div class="hero">
+    <div class="hero-left">
+      <span class="hero-eyebrow">Lançamentos do mês</span>
+      <div class="hero-month-nav">
+        <button class="btn-arrow" id="btnPrev">&#8592;</button>
+        <span class="hero-month" id="monthLabel">—</span>
+        <button class="btn-arrow" id="btnNext">&#8594;</button>
+      </div>
+      <span class="hero-sub" id="heroSub">carregando...</span>
     </div>
-    <div class="summary-item">
-      <span class="lbl">Despesas</span>
-      <span class="val-expense" id="sumExpense">—</span>
-    </div>
-    <div class="summary-item">
-      <span class="lbl">Investido</span>
-      <span class="val-invest" id="sumInvest">—</span>
-    </div>
-    <div class="summary-item">
-      <span class="lbl">Saldo</span>
-      <span class="val-balance" id="sumBalance">—</span>
+
+    <div class="hero-right">
+      <span class="hero-balance-lbl">Saldo do mês</span>
+      <div class="hero-balance">
+        <span class="hero-currency">R$</span>
+        <span class="hero-amount" id="heroAmount">—</span>
+        <span class="hero-cents" id="heroCents"></span>
+      </div>
     </div>
   </div>
 
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Descrição</th>
-          <th>Categoria / Caixinha</th>
-          <th>Data</th>
-          <th>Valor</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="tbody"></tbody>
-    </table>
+  <!-- ── STATS BAR ─────────────────────────────────────────── -->
+  <div class="stats-bar">
+    <div class="stat-block">
+      <span class="stat-lbl">Receitas</span>
+      <span class="stat-val income" id="sumIncome">—</span>
+      <span class="stat-sub" id="sumIncomeSub"></span>
+    </div>
+    <div class="stat-block">
+      <span class="stat-lbl">Despesas</span>
+      <span class="stat-val expense" id="sumExpense">—</span>
+      <span class="stat-sub" id="sumExpenseSub"></span>
+    </div>
+    <div class="stat-block">
+      <span class="stat-lbl">Investido</span>
+      <span class="stat-val invest" id="sumInvest">—</span>
+      <span class="stat-sub" id="sumInvestSub"></span>
+    </div>
+    <div class="stat-block">
+      <span class="stat-lbl">Saldo</span>
+      <span class="stat-val balance" id="sumBalance">—</span>
+      <span class="stat-sub" id="sumBalanceSub"></span>
+    </div>
   </div>
+
+  <!-- ── TABLE SECTION ─────────────────────────────────────── -->
+  <div class="table-section">
+    <div class="table-toolbar">
+      <span class="section-title">Histórico</span>
+      <div class="toolbar-actions">
+        <button class="btn-categories" id="btnCategories">Categorias</button>
+        <button class="btn-new" id="btnNew">+ Novo Lançamento</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Descrição</th>
+            <th>Categoria / Caixinha</th>
+            <th>Data</th>
+            <th>Valor</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
 </main>
 
 <div class="overlay" id="overlay"></div>
@@ -536,7 +728,7 @@
     <button class="btn-close" id="closeCat">✕</button>
   </div>
   <div class="panel-body">
-    <span class="section-label">Nova categoria</span>
+    <span class="panel-section-lbl">Nova categoria</span>
     <div class="field">
       <label>Nome</label>
       <input type="text" id="catName" placeholder="Ex: Alimentação, Salário..." />
@@ -550,7 +742,7 @@
       </div>
     </div>
     <div class="divider"></div>
-    <span class="section-label">Existentes</span>
+    <span class="panel-section-lbl">Existentes</span>
     <div class="cat-list" id="catList">
       <div class="cat-empty">Carregando...</div>
     </div>

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { listBoxes, createBox, updateBox, getBox, deleteBox, listBoxTransactions, deleteBoxTransaction } from './investments.service'
+import { listBoxes, createBox, updateBox, getBox, deleteBox, listBoxTransactions, deleteBoxTransaction, registerYield } from './investments.service'
 import { prisma } from '../../lib/prisma'
 
 const APR_2026 = { month: 4, year: 2026 }
@@ -24,6 +24,19 @@ async function seedWithdrawal(targetBoxId: number, amount: number, date = `${APR
       amount,
       type: 'INVESTMENT',
       sub_type: 'WITHDRAWAL',
+      date: new Date(date),
+      box_id: targetBoxId,
+    },
+  })
+}
+
+async function seedYield(targetBoxId: number, amount: number, date = `${APR_2026.year}-0${APR_2026.month}-05`) {
+  return prisma.transaction.create({
+    data: {
+      description: 'Rendimento',
+      amount,
+      type: 'INVESTMENT',
+      sub_type: 'YIELD',
       date: new Date(date),
       box_id: targetBoxId,
     },
@@ -458,5 +471,126 @@ describe('deleteBox', () => {
 
   it('throws BOX_NOT_FOUND for non-existent id', async () => {
     await expect(deleteBox(999999)).rejects.toMatchObject({ code: 'BOX_NOT_FOUND' })
+  })
+})
+
+// ─── createBox with initial_balance ──────────────────────────────────────────
+
+describe('createBox — initial_balance', () => {
+  it('creates box with initial_balance — balance returns that value without transactions', async () => {
+    const box = await createBox('Reserva', undefined, 500)
+    const result = await getBox(box.id)
+    expect(result.balance).toBe('500.00')
+    expect(result.initial_balance).toBe('500.00')
+  })
+
+  it('creates box without initial_balance — balance returns 0.00', async () => {
+    const box = await createBox('Reserva')
+    const result = await getBox(box.id)
+    expect(result.balance).toBe('0.00')
+    expect(result.initial_balance).toBeNull()
+  })
+
+  it('throws TRANSACTION_AMOUNT_INVALID for negative initial_balance', async () => {
+    await expect(createBox('Reserva', undefined, -100)).rejects.toMatchObject({ code: 'TRANSACTION_AMOUNT_INVALID' })
+  })
+})
+
+// ─── deleteBox with initial_balance ──────────────────────────────────────────
+
+describe('deleteBox — initial_balance', () => {
+  it('throws BOX_HAS_BALANCE when box has only initial_balance > 0', async () => {
+    const box = await createBox('Reserva', undefined, 500)
+    await expect(deleteBox(box.id)).rejects.toMatchObject({ code: 'BOX_HAS_BALANCE' })
+  })
+
+  it('throws BOX_HAS_BALANCE when initial_balance + YIELD > 0 with no deposits', async () => {
+    const box = await createBox('Reserva', undefined, 500)
+    await seedYield(box.id, 50)
+    await expect(deleteBox(box.id)).rejects.toMatchObject({ code: 'BOX_HAS_BALANCE' })
+  })
+})
+
+// ─── calculateBoxData with YIELD ─────────────────────────────────────────────
+
+describe('calculateBoxData — YIELD', () => {
+  it('adds YIELD to balance', async () => {
+    const box = await createBox('Reserva')
+    await seedDeposit(box.id, 1000)
+    await seedYield(box.id, 50)
+
+    const { boxes } = await listBoxes()
+    expect(boxes[0].balance).toBe('1050.00')
+  })
+})
+
+// ─── getBox with initial_balance and total_yield ──────────────────────────────
+
+describe('getBox — initial_balance and total_yield', () => {
+  it('returns initial_balance and total_yield separately', async () => {
+    const box = await createBox('Reserva', undefined, 1000)
+    await seedYield(box.id, 50)
+
+    const result = await getBox(box.id)
+    expect(result.initial_balance).toBe('1000.00')
+    expect(result.total_yield).toBe('50.00')
+    expect(result.balance).toBe('1050.00')
+  })
+
+  it('total_yield is 0.00 when no YIELD transactions', async () => {
+    const box = await createBox('Reserva')
+    await seedDeposit(box.id, 500)
+    const result = await getBox(box.id)
+    expect(result.total_yield).toBe('0.00')
+  })
+})
+
+// ─── registerYield ───────────────────────────────────────────────────────────
+
+describe('registerYield', () => {
+  it('current_value > balance → cria YIELD positivo (valorização)', async () => {
+    const box = await createBox('Reserva')
+    await seedDeposit(box.id, 1000)
+
+    const result = await registerYield(box.id, 1050)
+    expect(result.yield_amount).toBe('50.00')
+    expect(result.new_balance).toBe('1050.00')
+  })
+
+  it('current_value < balance → cria YIELD negativo (desvalorização)', async () => {
+    const box = await createBox('Reserva')
+    await seedDeposit(box.id, 1000)
+
+    const result = await registerYield(box.id, 950)
+    expect(result.yield_amount).toBe('-50.00')
+    expect(result.new_balance).toBe('950.00')
+  })
+
+  it('current_value == balance → lança TRANSACTION_AMOUNT_INVALID', async () => {
+    const box = await createBox('Reserva')
+    await seedDeposit(box.id, 1000)
+    await expect(registerYield(box.id, 1000)).rejects.toMatchObject({ code: 'TRANSACTION_AMOUNT_INVALID' })
+  })
+
+  it('current_value < 0 → lança TRANSACTION_AMOUNT_INVALID', async () => {
+    const box = await createBox('Reserva')
+    await expect(registerYield(box.id, -100)).rejects.toMatchObject({ code: 'TRANSACTION_AMOUNT_INVALID' })
+  })
+
+  it('box inexistente → lança BOX_NOT_FOUND', async () => {
+    await expect(registerYield(999999, 1000)).rejects.toMatchObject({ code: 'BOX_NOT_FOUND' })
+  })
+
+  it('data inválida → lança TRANSACTION_DATE_INVALID', async () => {
+    const box = await createBox('Reserva')
+    await seedDeposit(box.id, 1000)
+    await expect(registerYield(box.id, 1050, 'not-a-date')).rejects.toMatchObject({ code: 'TRANSACTION_DATE_INVALID' })
+  })
+
+  it('retorna yield_amount e new_balance corretos com initial_balance', async () => {
+    const box = await createBox('Reserva', undefined, 500)
+    const result = await registerYield(box.id, 600)
+    expect(result.yield_amount).toBe('100.00')
+    expect(result.new_balance).toBe('600.00')
   })
 })

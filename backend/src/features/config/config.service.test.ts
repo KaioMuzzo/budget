@@ -63,3 +63,28 @@ describe('saveConfig', () => {
     await expect(saveConfig(5000, wrong)).rejects.toMatchObject({ code: 'POCKETS_MUST_SUM_100' })
   })
 })
+
+// ─── saveConfig / fetchConfig — initial_balance ───────────────────────────────
+
+describe('saveConfig — initial_balance', () => {
+  it('persists initial_balance when provided', async () => {
+    await saveConfig(3000, validPockets, 1000)
+    const config = await fetchConfig()
+    expect(config.initial_balance).toBe('1000.00')
+  })
+
+  it('fetchConfig returns initial_balance null when not set', async () => {
+    await saveConfig(3000, validPockets)
+    const config = await fetchConfig()
+    expect(config.initial_balance).toBeNull()
+  })
+
+  it('saveConfig without initial_balance keeps field null — does not break', async () => {
+    const config = await saveConfig(3000, validPockets)
+    expect(config.initial_balance).toBeNull()
+  })
+
+  it('throws TRANSACTION_AMOUNT_INVALID for negative initial_balance', async () => {
+    await expect(saveConfig(3000, validPockets, -500)).rejects.toMatchObject({ code: 'TRANSACTION_AMOUNT_INVALID' })
+  })
+})

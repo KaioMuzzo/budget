@@ -218,6 +218,7 @@
     .stat-block:nth-child(2) { animation-delay: 0.13s; }
     .stat-block:nth-child(3) { animation-delay: 0.18s; }
     .stat-block:nth-child(4) { animation-delay: 0.23s; }
+    .stat-block:nth-child(5) { animation-delay: 0.28s; }
     .stat-block:last-child { border-right: none; }
 
     .stat-lbl {
@@ -413,10 +414,12 @@
     }
     .td-type.deposit    { background: rgba(168,255,62,0.1);   color: var(--accent);  }
     .td-type.withdrawal { background: rgba(244,114,182,0.12); color: var(--expense); }
+    .td-type.yield      { background: rgba(251,191,36,0.1);   color: #fbbf24; }
 
     .td-amount { font-family: var(--font-mono); font-weight: 600; font-size: 0.88rem; }
     .td-amount.deposit    { color: var(--accent);  }
     .td-amount.withdrawal { color: var(--expense); }
+    .td-amount.yield      { color: #fbbf24; }
 
     .td-date { font-family: var(--font-mono); font-size: 0.76rem; color: var(--muted); }
     .td-desc { font-size: 0.82rem; color: var(--muted); }
@@ -605,10 +608,15 @@
     <div class="stat-block">
       <span class="stat-lbl">Total aportado</span>
       <span class="stat-val blue" id="statDeposited">—</span>
+      <span class="stat-sub" id="statInitialBalance" style="display:none"></span>
     </div>
     <div class="stat-block">
       <span class="stat-lbl">Total resgatado</span>
       <span class="stat-val pink" id="statWithdrawn">—</span>
+    </div>
+    <div class="stat-block">
+      <span class="stat-lbl">Rendimentos</span>
+      <span class="stat-val" id="statYield" style="color:#fbbf24">—</span>
     </div>
     <div class="stat-block">
       <span class="stat-lbl">Movimentos</span>
@@ -1098,15 +1106,24 @@
       return
     }
 
+    const subTypeMap = {
+      DEPOSIT:    { label: 'Aporte',     cls: 'deposit',    sign: '+' },
+      WITHDRAWAL: { label: 'Resgate',    cls: 'withdrawal', sign: '-' },
+      YIELD:      { label: 'Rendimento', cls: 'yield' },
+    }
+
     tbody.innerHTML = txs.map((t, i) => {
-      const isDeposit = t.sub_type === 'DEPOSIT'
+      const meta      = subTypeMap[t.sub_type] ?? { label: t.sub_type, cls: '' }
       const desc      = t.description || ''
+      const yieldSign = t.sub_type === 'YIELD'
+        ? (parseFloat(t.amount) >= 0 ? '+' : '')
+        : meta.sign
       return `
         <tr style="animation-delay:${i * 0.04}s">
-          <td><span class="td-type ${isDeposit ? 'deposit' : 'withdrawal'}">${isDeposit ? 'Aporte' : 'Resgate'}</span></td>
+          <td><span class="td-type ${meta.cls}">${meta.label}</span></td>
           <td class="td-date">${fmtDate(t.date)}</td>
           <td class="td-desc ${desc ? '' : 'empty'}">${desc || '—'}</td>
-          <td class="td-amount ${isDeposit ? 'deposit' : 'withdrawal'}">${isDeposit ? '+' : '-'} ${fmt(t.amount)}</td>
+          <td class="td-amount ${meta.cls}">${yieldSign} ${fmt(t.amount)}</td>
           <td><button class="btn-delete-tx" data-id="${t.id}" title="Remover">✕</button></td>
         </tr>
       `
@@ -1153,7 +1170,16 @@
 
       document.getElementById('statDeposited').textContent = fmt(box.total_deposited)
       document.getElementById('statWithdrawn').textContent = fmt(box.total_withdrawn)
+      document.getElementById('statYield').textContent     = fmt(box.total_yield ?? '0.00')
       document.getElementById('statCount').textContent     = box.transaction_count
+
+      const ibEl = document.getElementById('statInitialBalance')
+      if (box.initial_balance && parseFloat(box.initial_balance) > 0) {
+        ibEl.textContent     = `+ ${fmt(box.initial_balance)} de saldo inicial`
+        ibEl.style.display   = ''
+      } else {
+        ibEl.style.display   = 'none'
+      }
 
       const d      = new Date(box.created_at)
       const since  = MONTH_NAMES[d.getMonth()].slice(0, 3).toLowerCase() + '/' + d.getFullYear()
